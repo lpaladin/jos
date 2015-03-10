@@ -1,4 +1,5 @@
-/* See COPYRIGHT for copyright information. */
+﻿/* See COPYRIGHT for copyright information. */
+// Lab1 的新增代码会采用不同的代码风格，包括大括号的用法等。
 
 #include <inc/x86.h>
 #include <inc/memlayout.h>
@@ -10,6 +11,15 @@
 
 static void cons_intr(int (*proc)(void));
 static void cons_putc(int c);
+
+// ANSI 转义序列用宏
+
+#define ANSI_ESCAPE_STATE_NONE			0
+#define ANSI_ESCAPE_STATE_AFTER_ESC		1
+#define ANSI_ESCAPE_STATE_AFTER_LBRK	2
+
+#define ANSI_ESCAPE_FORE_PREFIX	3 + '0'
+#define ANSI_ESCAPE_BKG_PREFIX	4 + '0'
 
 // Stupid I/O delay routine necessitated by historical PC design flaws
 static void
@@ -451,7 +461,52 @@ cons_init(void)
 void
 cputchar(int c)
 {
-	cons_putc(c);
+	// 非常蛋疼的判断ANSI转义序列的方式
+	static char ansi_escape_state = ANSI_ESCAPE_STATE_NONE,
+		ansi_escape_last_char = 0,
+		ansi_escape_last_format = 0;
+
+	if (ansi_escape_state == ANSI_ESCAPE_STATE_AFTER_ESC)
+	{
+		if (c == '[')
+		{
+			// 是转义字符串
+			ansi_escape_state = ANSI_ESCAPE_STATE_AFTER_LBRK;
+			ansi_escape_last_char = 0;
+		}
+		else
+			// 不是转义字符串，清除状态
+			ansi_escape_state = ANSI_ESCAPE_STATE_NONE;
+	}
+	else if (ansi_escape_state == ANSI_ESCAPE_STATE_AFTER_LBRK)
+	{
+		// 已经进入了转义字符串，检查是否为数字或分号
+		if (c == ';');
+		else if (c >= '0' && c <= '7')
+		{
+			if (ansi_escape_last_char == ANSI_ESCAPE_BKG_PREFIX)
+				// 将当前颜色插入到格式中的背景色中
+				ansi_escape_last_format = (ansi_escape_last_format & 0x0f) | ((c - '0') << 4);
+			else if (ansi_escape_last_char == ANSI_ESCAPE_FORE_PREFIX)
+				// 将当前颜色插入到格式中的前景色中
+				ansi_escape_last_format = (ansi_escape_last_format & 0xf0) | (c - '0');
+			else if (c == '0')
+				// 清除格式
+				ansi_escape_last_format = 0;
+		}
+		else
+			// 奇怪的字符，清除状态
+			ansi_escape_state = ANSI_ESCAPE_STATE_NONE;
+
+		// 记录上一个字符，用于确定是前景还是背景
+		ansi_escape_last_char = c;
+	}
+	else if (c == '\033')
+		// 有个 Escape 字符，看看下一个是不是[
+		ansi_escape_state = ANSI_ESCAPE_STATE_AFTER_ESC;
+	else
+		// 加入格式输出
+		cons_putc((ansi_escape_last_format << 8) | c);
 }
 
 int
