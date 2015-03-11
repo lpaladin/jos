@@ -34,10 +34,11 @@ i386_init(void)
 	cons_init();
 
 	cprintf("6828 decimal is %o octal!\n", 6828);
-	cprintf("Colored text test: \033[1;37;46mthis is with color\033[0m but this is not\n");
 
 	// Test the stack backtrace function (lab 1 only)
 	test_backtrace(5);
+
+	cprintf("Colored text test: \033[1;37;46mthis is with color\033[0m but this is not\n");
 
 	// Drop into the kernel monitor.
 	while (1)
