@@ -29,6 +29,8 @@ i386_init(void)
 	// Lab 2 memory management initialization functions
 	mem_init();
 
+	cprintf("Colored text test: \033[1;37;46mthis is with color\033[0m but this is not\n");
+
 	// Drop into the kernel monitor.
 	while (1)
 		monitor(NULL);
