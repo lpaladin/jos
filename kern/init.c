@@ -6,18 +6,9 @@
 
 #include <kern/monitor.h>
 #include <kern/console.h>
+#include <kern/pmap.h>
+#include <kern/kclock.h>
 
-// Test the stack backtrace function (lab 1 only)
-void
-test_backtrace(int x)
-{
-	cprintf("entering test_backtrace %d\n", x);
-	if (x > 0)
-		test_backtrace(x-1);
-	else
-		mon_backtrace(0, 0, 0);
-	cprintf("leaving test_backtrace %d\n", x);
-}
 
 void
 i386_init(void)
@@ -35,8 +26,10 @@ i386_init(void)
 
 	cprintf("6828 decimal is %o octal!\n", 6828);
 
-	// Test the stack backtrace function (lab 1 only)
-	test_backtrace(5);
+	// Lab 2 memory management initialization functions
+	mem_init();
+
+	cprintf("Colored text test: \033[1;32;46mthis is with color\033[0m but this is not\n");
 
 	// Drop into the kernel monitor.
 	while (1)
@@ -67,9 +60,9 @@ _panic(const char *file, int line, const char *fmt,...)
 	__asm __volatile("cli; cld");
 
 	va_start(ap, fmt);
-	cprintf("kernel panic at %s:%d: ", file, line);
+	cprintf("\033[1;35;47mkernel panic at %s:%d: ", file, line);
 	vcprintf(fmt, ap);
-	cprintf("\n");
+	cprintf("\033[0m\n");
 	va_end(ap);
 
 dead:
