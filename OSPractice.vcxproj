@@ -61,8 +61,10 @@
     <ClCompile Include="kern\console.c" />
     <ClCompile Include="kern\entrypgdir.c" />
     <ClCompile Include="kern\init.c" />
+    <ClCompile Include="kern\kclock.c" />
     <ClCompile Include="kern\kdebug.c" />
     <ClCompile Include="kern\monitor.c" />
+    <ClCompile Include="kern\pmap.c" />
     <ClCompile Include="kern\printf.c" />
     <ClCompile Include="lib\printfmt.c" />
     <ClCompile Include="lib\readline.c" />
@@ -83,12 +85,12 @@
     <ClInclude Include="inc\types.h" />
     <ClInclude Include="inc\x86.h" />
     <ClInclude Include="kern\console.h" />
+    <ClInclude Include="kern\kclock.h" />
     <ClInclude Include="kern\kdebug.h" />
     <ClInclude Include="kern\monitor.h" />
+    <ClInclude Include="kern\pmap.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="boot\boot.S" />
-    <None Include="kern\entry.S" />
     <None Include="obj\boot\boot.asm" />
     <None Include="obj\kern\kernel.asm" />
   </ItemGroup>
