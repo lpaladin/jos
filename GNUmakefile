@@ -49,7 +49,18 @@ endif
 
 # try to infer the correct QEMU
 ifndef QEMU
-QEMU := D:/Program\ Files/qemu/qemu-system-i386
+QEMU := $(shell if which qemu > /dev/null; \
+	then echo qemu; exit; \
+        elif which qemu-system-i386 > /dev/null; \
+        then echo qemu-system-i386; exit; \
+	else \
+	qemu=/Applications/Q.app/Contents/MacOS/i386-softmmu.app/Contents/MacOS/i386-softmmu; \
+	if test -x $$qemu; then echo $$qemu; exit; fi; fi; \
+	echo "***" 1>&2; \
+	echo "*** Error: Couldn't find a working QEMU executable." 1>&2; \
+	echo "*** Is the directory containing the qemu binary in your PATH" 1>&2; \
+	echo "*** or have you tried setting the QEMU variable in conf/env.mk?" 1>&2; \
+	echo "***" 1>&2; exit 1)
 endif
 
 # try to generate a unique GDB port
@@ -126,7 +137,7 @@ include boot/Makefrag
 include kern/Makefrag
 
 
-QEMUOPTS = -gdb tcp:127.0.0.1:$(GDBPORT),ipv4 -hda $(OBJDIR)/kern/kernel.img
+QEMUOPTS = -hda $(OBJDIR)/kern/kernel.img -serial mon:stdio -gdb tcp::$(GDBPORT)
 QEMUOPTS += $(shell if $(QEMU) -nographic -help | grep -q '^-D '; then echo '-D qemu.log'; fi)
 IMAGES = $(OBJDIR)/kern/kernel.img
 QEMUOPTS += $(QEMUEXTRA)
@@ -135,7 +146,7 @@ QEMUOPTS += $(QEMUEXTRA)
 	sed "s/localhost:1234/localhost:$(GDBPORT)/" < $^ > $@
 
 gdb:
-	i386-jos-elf-gdb -x .gdbinit
+	gdb -x .gdbinit
 
 pre-qemu: .gdbinit
 
@@ -152,7 +163,7 @@ qemu-gdb: $(IMAGES) pre-qemu
 	@echo "***"
 	@echo "*** Now run 'make gdb'." 1>&2
 	@echo "***"
-	$(QEMU) -S $(QEMUOPTS)
+	$(QEMU) $(QEMUOPTS) -S
 
 qemu-nox-gdb: $(IMAGES) pre-qemu
 	@echo "***"
