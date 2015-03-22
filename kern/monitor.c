@@ -1,4 +1,4 @@
-﻿// Simple command-line kernel monitor useful for
+// Simple command-line kernel monitor useful for
 // controlling the kernel and exploring the system interactively.
 
 #include <inc/stdio.h>
@@ -12,7 +12,7 @@
 #include <kern/kdebug.h>
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
-#define READ_ADDR(addr) (*(uint32_t *)(addr))
+
 
 struct Command {
 	const char *name;
@@ -24,7 +24,6 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
-	{ "backtrace", "Display a listing of function call frames", mon_backtrace },
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
@@ -59,24 +58,7 @@ mon_kerninfo(int argc, char **argv, struct Trapframe *tf)
 int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
-	uint32_t ebp = read_ebp(), eip, i;
-	struct Eipdebuginfo info;
-	cprintf("Stack backtrace:\n");
-	for (; ebp != 0; ebp = READ_ADDR(ebp))
-	{
-		eip = READ_ADDR(ebp + 4);
-
-		// 函数栈帧基本信息
-		cprintf("  ebp %08x  eip %08x  args", ebp, eip);
-		for (i = 2; i < 7; i++)
-			cprintf(" %08x", READ_ADDR(ebp + i * 4));
-		cputchar('\n');
-
-		// 根据 eip 得出的函数定义信息
-		debuginfo_eip(eip, &info);
-		cprintf("         %s:%d: %.*s+%d\n", info.eip_file,
-			info.eip_line, info.eip_fn_namelen, info.eip_fn_name, eip - info.eip_fn_addr);
-	}
+	// Your code here.
 	return 0;
 }
 
