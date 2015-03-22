@@ -29,7 +29,7 @@ i386_init(void)
 	// Lab 2 memory management initialization functions
 	mem_init();
 
-	cprintf("Colored text test: \033[1;37;46mthis is with color\033[0m but this is not\n");
+	cprintf("Colored text test: \033[1;32;46mthis is with color\033[0m but this is not\n");
 
 	// Drop into the kernel monitor.
 	while (1)
@@ -60,9 +60,9 @@ _panic(const char *file, int line, const char *fmt,...)
 	__asm __volatile("cli; cld");
 
 	va_start(ap, fmt);
-	cprintf("kernel panic at %s:%d: ", file, line);
+	cprintf("\033[1;35;47mkernel panic at %s:%d: ", file, line);
 	vcprintf(fmt, ap);
-	cprintf("\n");
+	cprintf("\033[0m\n");
 	va_end(ap);
 
 dead:
