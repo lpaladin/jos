@@ -60,7 +60,7 @@ _panic(const char *file, int line, const char *fmt,...)
 	__asm __volatile("cli; cld");
 
 	va_start(ap, fmt);
-	cprintf("\033[1;35;47mkernel panic at %s:%d: ", file, line);
+	cprintf("\033[1;34;47mkernel panic at %s:%d: ", file, line);
 	vcprintf(fmt, ap);
 	cprintf("\033[0m\n");
 	va_end(ap);

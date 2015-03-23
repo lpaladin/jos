@@ -9,9 +9,12 @@
 #include <kern/pmap.h>
 #include <kern/kclock.h>
 
+#define dbgprintf(...) cprintf(__VA_ARGS__)
+
 // These variables are set by i386_detect_memory()
 size_t npages;			// Amount of physical memory (in pages)
 static size_t npages_basemem;	// Amount of base memory (in pages)
+int support_pse;			// 处理器是否支持 PSE
 
 // These variables are set in mem_init()
 pde_t *kern_pgdir;		// Kernel's initial page directory
@@ -121,11 +124,15 @@ boot_alloc(uint32_t n)
 void
 mem_init(void)
 {
-	uint32_t cr0;
+	uint32_t cr0, cpuid_edx;
 	size_t n;
 
 	// Find out how much memory the machine has (npages & npages_basemem).
 	i386_detect_memory();
+
+	// 通过 CPUID 检查 CPU 对 PSE（页面大小扩展）特性的支持情况
+	cpuid(1, NULL, NULL, NULL, &cpuid_edx);
+	support_pse = (cpuid_edx >> 3) & 1;
 
 	// Remove this line when you're ready to test this function.
 	// panic("mem_init: This function is not finished\n");
@@ -201,7 +208,14 @@ mem_init(void)
 	// we just set up the mapping anyway.
 	// Permissions: kernel RW, user NONE
 	// Your code goes here:
-	boot_map_region(kern_pgdir, KERNBASE, -KERNBASE, 0, PTE_W | PTE_P);
+	if (support_pse)
+	{
+		// 使用页大小扩展特性（PSE）向页目录表插入 4MB 页表项
+		dbgprintf("\033[1;31;46mPSEMapRegion\033[0m\n");
+		for (n = 0; n < (uint32_t) -KERNBASE; n += PTSIZE)
+			kern_pgdir[PDX(KERNBASE + n)] = n | PTE_PS | PTE_W | PTE_P;
+	} else
+		boot_map_region(kern_pgdir, KERNBASE, -KERNBASE, 0, PTE_W | PTE_P);
 
 	// Check that the initial page directory has been set up correctly.
 	check_kern_pgdir();
@@ -213,6 +227,16 @@ mem_init(void)
 	//
 	// If the machine reboots at this point, you've probably set up your
 	// kern_pgdir wrong.
+	if (support_pse)
+	{
+		// 启用 PSE
+		lcr4(rcr4() | CR4_PSE);
+
+		// TLB 无效化
+		for (n = 0; n < (uint32_t)-KERNBASE; n += PGSIZE * NPTENTRIES)
+			invlpg((void *)(KERNBASE + n));
+	}
+
 	lcr3(PADDR(kern_pgdir));
 
 	check_page_free_list(0);
@@ -379,6 +403,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
+	dbgprintf("\033[1;32;44mMapRegion\033[0m: VIRT\033[1;35;47m[0x%08x~0x%08x]\033[0m <== PHYS\033[1;36;42m[0x%08x~0x%08x]\033[0m\n", va, va + size, pa, pa + size);
 	size_t i;
 	for (i = 0; i < size; i += PGSIZE)
 		*pgdir_walk(pgdir, (void *) (va + i), true) = (pa + i) | perm;
@@ -688,6 +713,8 @@ check_va2pa(pde_t *pgdir, uintptr_t va)
 	pgdir = &pgdir[PDX(va)];
 	if (!(*pgdir & PTE_P))
 		return ~0;
+	if (support_pse && *pgdir & PTE_PS)
+		return PTE_ADDR(*pgdir) + (PTX(va) << PGSHIFT);
 	p = (pte_t*) KADDR(PTE_ADDR(*pgdir));
 	if (!(p[PTX(va)] & PTE_P))
 		return ~0;
