@@ -1,0 +1,100 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{AD8B1B03-05D0-4B72-BCA1-688589744842}</ProjectGuid>
+    <Keyword>MakeFileProj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <NMakeBuildCommandLine>make</NMakeBuildCommandLine>
+    <NMakeOutput>Debug.cmd</NMakeOutput>
+    <NMakeCleanCommandLine>make clean</NMakeCleanCommandLine>
+    <NMakePreprocessorDefinitions>WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);.</IncludePath>
+    <OutDir>.</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <NMakeBuildCommandLine>make</NMakeBuildCommandLine>
+    <NMakeOutput>Release.cmd</NMakeOutput>
+    <NMakeCleanCommandLine>make clean</NMakeCleanCommandLine>
+    <NMakePreprocessorDefinitions>WIN32;NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <OutDir>.</OutDir>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);.</IncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <Text Include="readme.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="boot\main.c" />
+    <ClCompile Include="kern\console.c" />
+    <ClCompile Include="kern\entrypgdir.c" />
+    <ClCompile Include="kern\init.c" />
+    <ClCompile Include="kern\kclock.c" />
+    <ClCompile Include="kern\kdebug.c" />
+    <ClCompile Include="kern\monitor.c" />
+    <ClCompile Include="kern\pmap.c" />
+    <ClCompile Include="kern\printf.c" />
+    <ClCompile Include="lib\printfmt.c" />
+    <ClCompile Include="lib\readline.c" />
+    <ClCompile Include="lib\string.c" />
+    <ClCompile Include="user\sendpage.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="inc\assert.h" />
+    <ClInclude Include="inc\elf.h" />
+    <ClInclude Include="inc\error.h" />
+    <ClInclude Include="inc\kbdreg.h" />
+    <ClInclude Include="inc\memlayout.h" />
+    <ClInclude Include="inc\mmu.h" />
+    <ClInclude Include="inc\stab.h" />
+    <ClInclude Include="inc\stdarg.h" />
+    <ClInclude Include="inc\stdio.h" />
+    <ClInclude Include="inc\string.h" />
+    <ClInclude Include="inc\types.h" />
+    <ClInclude Include="inc\x86.h" />
+    <ClInclude Include="kern\console.h" />
+    <ClInclude Include="kern\kclock.h" />
+    <ClInclude Include="kern\kdebug.h" />
+    <ClInclude Include="kern\monitor.h" />
+    <ClInclude Include="kern\pmap.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="obj\boot\boot.asm" />
+    <None Include="obj\kern\kernel.asm" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
