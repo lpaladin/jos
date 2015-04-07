@@ -18,6 +18,7 @@ int mon_backtrace(int argc, char **argv, struct Trapframe *tf);
 int mon_showmappings(int argc, char **argv, struct Trapframe *tf);
 int mon_chmappingperm(int argc, char **argv, struct Trapframe *tf);
 int mon_memdump(int argc, char **argv, struct Trapframe *tf);
+int mon_testint(int argc, char **argv, struct Trapframe *tf);
 
 int parse_hexaddr(const char *str, uint32_t *result);
 

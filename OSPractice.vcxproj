@@ -60,37 +60,67 @@
     <ClCompile Include="boot\main.c" />
     <ClCompile Include="kern\console.c" />
     <ClCompile Include="kern\entrypgdir.c" />
+    <ClCompile Include="kern\env.c" />
     <ClCompile Include="kern\init.c" />
     <ClCompile Include="kern\kclock.c" />
     <ClCompile Include="kern\kdebug.c" />
     <ClCompile Include="kern\monitor.c" />
     <ClCompile Include="kern\pmap.c" />
     <ClCompile Include="kern\printf.c" />
+    <ClCompile Include="kern\syscall.c" />
+    <ClCompile Include="kern\trap.c" />
+    <ClCompile Include="lib\console.c" />
+    <ClCompile Include="lib\exit.c" />
+    <ClCompile Include="lib\libmain.c" />
+    <ClCompile Include="lib\panic.c" />
+    <ClCompile Include="lib\printf.c" />
     <ClCompile Include="lib\printfmt.c" />
     <ClCompile Include="lib\readline.c" />
     <ClCompile Include="lib\string.c" />
+    <ClCompile Include="lib\syscall.c" />
+    <ClCompile Include="user\badsegment.c" />
+    <ClCompile Include="user\breakpoint.c" />
+    <ClCompile Include="user\buggyhello.c" />
+    <ClCompile Include="user\buggyhello2.c" />
+    <ClCompile Include="user\divzero.c" />
+    <ClCompile Include="user\evilhello.c" />
+    <ClCompile Include="user\faultread.c" />
+    <ClCompile Include="user\faultreadkernel.c" />
+    <ClCompile Include="user\faultwrite.c" />
+    <ClCompile Include="user\faultwritekernel.c" />
+    <ClCompile Include="user\hello.c" />
     <ClCompile Include="user\sendpage.c" />
+    <ClCompile Include="user\softint.c" />
+    <ClCompile Include="user\testbss.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\assert.h" />
     <ClInclude Include="inc\elf.h" />
+    <ClInclude Include="inc\env.h" />
     <ClInclude Include="inc\error.h" />
     <ClInclude Include="inc\kbdreg.h" />
+    <ClInclude Include="inc\lib.h" />
     <ClInclude Include="inc\memlayout.h" />
     <ClInclude Include="inc\mmu.h" />
     <ClInclude Include="inc\stab.h" />
     <ClInclude Include="inc\stdarg.h" />
     <ClInclude Include="inc\stdio.h" />
     <ClInclude Include="inc\string.h" />
+    <ClInclude Include="inc\syscall.h" />
+    <ClInclude Include="inc\trap.h" />
     <ClInclude Include="inc\types.h" />
     <ClInclude Include="inc\x86.h" />
     <ClInclude Include="kern\console.h" />
+    <ClInclude Include="kern\env.h" />
     <ClInclude Include="kern\kclock.h" />
     <ClInclude Include="kern\kdebug.h" />
     <ClInclude Include="kern\monitor.h" />
     <ClInclude Include="kern\pmap.h" />
+    <ClInclude Include="kern\syscall.h" />
+    <ClInclude Include="kern\trap.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="kern\trapentry.S" />
     <None Include="obj\boot\boot.asm" />
     <None Include="obj\kern\kernel.asm" />
   </ItemGroup>
