@@ -549,12 +549,13 @@ int
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 { 
 	// LAB 3: Your code here.
-	uintptr_t addr, end = (uintptr_t) (va) + len;
+	uintptr_t addr, end;
 	pte_t *pte;
 
 	perm |= PTE_P;
 
-	for (addr = (uintptr_t) va; addr < end; addr += PGSIZE)
+	for (addr = ROUNDDOWN((uintptr_t) va, PGSIZE),
+		end = ROUNDUP((uintptr_t)(va) + len, PGSIZE); addr < end; addr += PGSIZE)
 	{
 		pte = pgdir_walk(env->env_pgdir, (void *) addr, 0);
 		if (!pte || (*pte & perm) != perm)
