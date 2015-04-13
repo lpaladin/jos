@@ -1,4 +1,4 @@
-﻿/* See COPYRIGHT for copyright information. */
+/* See COPYRIGHT for copyright information. */
 
 #include <inc/x86.h>
 #include <inc/mmu.h>
@@ -133,7 +133,7 @@ mem_init(void)
 
 	// 通过 CPUID 检查 CPU 对 PSE（页面大小扩展）特性的支持情况
 	cpuid(1, NULL, NULL, NULL, &cpuid_edx);
-	support_pse = (cpuid_edx >> 3) & 1;
+	support_pse = (cpuid_edx >> CPUID_EDX_PSE_BIT) & 1;
 
 	// Remove this line when you're ready to test this function.
 	// panic("mem_init: This function is not finished\n");

@@ -5,12 +5,12 @@
 #endif
 #include <kern/pmap.h>
 
-// ¾¯¸æ£º¸ÃÎÄ¼þ¶¨ÒåµÄËùÓÐº¯Êý¶¼ÊÇ³¬¼¶ Hack£¬½öÓÃÓÚ Lab3 Challenge2
+// è­¦å‘Šï¼šè¯¥æ–‡ä»¶å®šä¹‰çš„æ‰€æœ‰å‡½æ•°éƒ½æ˜¯è¶…çº§ Hackï¼Œä»…ç”¨äºŽ Lab3 Challenge2
 
 char area[64][1024];
 bool status[64] = { 0 };
 
-// ¾¯¸æ£º¸Ãº¯ÊýÖ»»á·ÖÅäÒ»Ò³£¬²ÎÊýÎÞÓÃ
+// è­¦å‘Šï¼šè¯¥å‡½æ•°åªä¼šåˆ†é…ä¸€é¡µï¼Œå‚æ•°æ— ç”¨
 void *
 fake_calloc(size_t n, size_t size)
 {

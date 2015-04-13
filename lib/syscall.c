@@ -3,6 +3,38 @@
 #include <inc/syscall.h>
 #include <inc/lib.h>
 
+
+#ifdef USE_SYSENTER
+
+__attribute__((noinline)) static int32_t
+syscall(int num, int check, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
+{
+	int32_t ret;
+
+	// sysenter 指令
+
+	asm volatile(
+		"push %%esi\n"
+		"push %%ebp\n"
+		"movl %%esp, %%ebp\n"
+		"push %%esp\n"
+		"leal _sysenter_end, %%esi\n"
+		"sysenter\n"
+		"_sysenter_end:\n"
+		"pop %%esp\n"
+		"pop %%ebp\n"
+		"pop %%esi\n"
+		: "=a" (ret)
+		:
+		"a" (num),
+		"d" (a1),
+		"c" (a2),
+		"b" (a3),
+		"D" (a4)
+		: "cc", "memory");
+
+#else
+
 static inline int32_t
 syscall(int num, int check, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
 {
@@ -30,6 +62,8 @@ syscall(int num, int check, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		  "D" (a4),
 		  "S" (a5)
 		: "cc", "memory");
+
+#endif
 
 	if(check && ret > 0)
 		panic("syscall %d returned %d (> 0)", num, ret);

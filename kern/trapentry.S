@@ -20,11 +20,13 @@
  *   void NAME();
  * where NAME is the argument passed to TRAPHANDLER.
  */
+
+/* Lab3 Challenge1 宏定义被修改，使得一边定义函数一边建立数组 */
 #define TRAPHANDLER(num)														\
 	.data;																		\
 	.long __handler_##num;														\
 	.text;																		\
-	.globl __handler_##num;				/* define global symbol for 'name' */	\
+	.globl __handler_##num;				/* define global symbol */				\
 	.type __handler_##num, @function;	/* symbol type is function */			\
 	.align 2;							/* align function definition */			\
 	__handler_##num:					/* function starts here */				\
@@ -333,3 +335,23 @@ _alltraps:
 	movw	%ax, %es
 	pushl	%esp
 	call	trap
+
+/* Lab3 Challenge3 准备 syscall 的入口 */
+
+.globl _syscall_handler
+.type _syscall_handler, @function
+_syscall_handler:
+	push	%esi
+	push	%ebp
+	push	$0
+	push	%edi
+	push	%ebx
+	push	%ecx
+	push	%edx
+	push	%eax
+	call	syscall
+	addl	$24, %esp
+	pop		%ecx
+	pop		%edx
+	addl	$-4, %ecx
+	sysexit

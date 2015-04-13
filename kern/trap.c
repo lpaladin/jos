@@ -25,6 +25,8 @@ struct Pseudodesc idt_pd = {
 	sizeof(idt) - 1, (uint32_t) idt
 };
 
+// 处理器是否支持 MSR 寄存器
+int msr_supported;
 
 static const char *trapname(int trapno)
 {
@@ -65,7 +67,21 @@ void
 trap_init(void)
 {
 	int i;
+	uint32_t cpuid_edx, a1, a2;
 	extern struct Segdesc gdt[];
+	extern handler _syscall_handler;
+
+	cpuid(1, NULL, NULL, NULL, &cpuid_edx);
+	msr_supported = (cpuid_edx >> CPUID_EDX_MSR_BIT) & 1;
+
+	if (msr_supported)
+	{
+		// 下面那个取地址是为了对抗 GCC 很奇怪的行为（如果不加会把参数当成地址而不是立即数）
+		wrmsr(MSR_IA32_SYSENTER_CS, GD_KT, 0);
+		wrmsr(MSR_IA32_SYSENTER_ESP, &ts.ts_esp0, 0);
+		wrmsr(MSR_IA32_SYSENTER_EIP, &_syscall_handler, 0);
+		cprintf("\033[1;31;45mMSR is supported - ready to support sysenter\033[0m\n");
+	}
 
 	// LAB 3: Your code here.
 	for (i = 0; i < 256; i++)
