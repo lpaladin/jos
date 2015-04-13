@@ -12,6 +12,8 @@
 #include <kern/kdebug.h>
 #include <kern/trap.h>
 #include <kern/pmap.h>
+#include <kern/env.h>
+#include <kern/libdisasm/libdis.h>
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
 #define READ_ADDR(addr) (*(uint32_t *)(addr))
@@ -30,7 +32,9 @@ static struct Command commands[] = {
 	{ "showmappings", "Display page mappings", mon_showmappings },
 	{ "chmappingperm", "Change permission of a page mapping", mon_chmappingperm },
 	{ "memdump", "Dump the contents of a range of memory", mon_memdump },
-	{ "testint", "Run an instruction 'int $<arg>'", mon_testint }
+	{ "testint", "Run an instruction 'int $<arg>'", mon_testint },
+	{ "si", "Run the next instruction of current environment and stop", mon_si },
+	{ "exit", "Switch back to the current environment", mon_exit }
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
@@ -629,6 +633,30 @@ mon_testint(int argc, char **argv, struct Trapframe *tf)
 	return 0;
 }
 
+int
+mon_si(int argc, char **argv, struct Trapframe *tf)
+{
+	if (!tf)
+	{
+		cprintf("No environment available.\n");
+		return 0;
+	}
+	tf->tf_eflags |= FL_TF;
+	return -1;
+}
+
+int
+mon_exit(int argc, char **argv, struct Trapframe *tf)
+{
+	if (!tf)
+	{
+		cprintf("No environment available.\n");
+		return 0;
+	}
+	tf->tf_eflags &= ~FL_TF;
+	return -1;
+}
+
 /***** Kernel monitor command interpreter *****/
 
 #define WHITESPACE "\t\r\n "
@@ -680,8 +708,9 @@ monitor(struct Trapframe *tf)
 
 	cprintf("Welcome to the JOS kernel monitor!\n");
 	cprintf("Type 'help' for a list of commands.\n");
+	show_nextinstr(tf);
 
-	if (tf != NULL)
+	if (tf != NULL && !(tf->tf_eflags & FL_TF))
 		print_trapframe(tf);
 
 	while (1) {
@@ -716,4 +745,17 @@ parse_hexaddr(const char *str, uint32_t *result)
 	}
 	*result = temp;
 	return 0;
+}
+
+// 反汇编下一条指令
+void
+show_nextinstr(struct Trapframe *tf)
+{
+	static char buf[1024] = { 0 };
+	if (!tf)
+		return;
+	disassemble_init(0, ATT_SYNTAX);
+	sprint_address(buf, 1023, (void *)tf->tf_eip);
+	cprintf("\033[1;34;43mCurrent Instruction\033[0m: \033[1;37;41m%s\033[0m\n", buf);
+	disassemble_cleanup();
 }

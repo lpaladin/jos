@@ -64,6 +64,9 @@
     <ClCompile Include="kern\init.c" />
     <ClCompile Include="kern\kclock.c" />
     <ClCompile Include="kern\kdebug.c" />
+    <ClCompile Include="kern\libdisasm\i386.c" />
+    <ClCompile Include="kern\libdisasm\i386.opcode.map" />
+    <ClCompile Include="kern\libdisasm\libdis.c" />
     <ClCompile Include="kern\monitor.c" />
     <ClCompile Include="kern\pmap.c" />
     <ClCompile Include="kern\printf.c" />
@@ -114,6 +117,12 @@
     <ClInclude Include="kern\env.h" />
     <ClInclude Include="kern\kclock.h" />
     <ClInclude Include="kern\kdebug.h" />
+    <ClInclude Include="kern\k_fakealloc.h" />
+    <ClInclude Include="kern\libdisasm\bastard.h" />
+    <ClInclude Include="kern\libdisasm\extension.h" />
+    <ClInclude Include="kern\libdisasm\i386.h" />
+    <ClInclude Include="kern\libdisasm\libdis.h" />
+    <ClInclude Include="kern\libdisasm\vm.h" />
     <ClInclude Include="kern\monitor.h" />
     <ClInclude Include="kern\pmap.h" />
     <ClInclude Include="kern\syscall.h" />
