@@ -69,7 +69,7 @@ trap_init(void)
 
 	// LAB 3: Your code here.
 	for (i = 0; i < 256; i++)
-		SETGATE(idt[i], true, GD_KT, _handler_array[i], 0);
+		SETGATE(idt[i], true, GD_KT, _handler_array[i], i == T_BRKPT || i == T_SYSCALL ? 3 : 0);
 
 	// Per-CPU setup 
 	trap_init_percpu();
@@ -91,6 +91,7 @@ trap_init_percpu(void)
 
 	// Load the TSS selector (like other segment selectors, the
 	// bottom three bits are special; we leave them 0)
+
 	ltr(GD_TSS0);
 
 	// Load the IDT
@@ -148,6 +149,21 @@ trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
+	switch (tf->tf_trapno) 
+	{
+	case T_PGFLT:
+		return page_fault_handler(tf);
+	case T_BRKPT:
+		return monitor(tf);
+	case T_SYSCALL:
+		return (void) (tf->tf_regs.reg_eax = syscall(
+			tf->tf_regs.reg_eax,
+			tf->tf_regs.reg_edx,
+			tf->tf_regs.reg_ecx,
+			tf->tf_regs.reg_ebx,
+			tf->tf_regs.reg_edi,
+			tf->tf_regs.reg_esi));
+	}
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
@@ -209,6 +225,8 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
+	if (tf->tf_cs == GD_KT)
+		panic("page_fault_handler: page fault occured in kernel mode");
 
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.

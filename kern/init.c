@@ -40,7 +40,7 @@ i386_init(void)
 	ENV_CREATE(TEST, ENV_TYPE_USER);
 #else
 	// Touch all you want.
-	ENV_CREATE(user_softint, ENV_TYPE_USER);
+	ENV_CREATE(user_evilhello, ENV_TYPE_USER);
 #endif // TEST*
 
 	// We only have one user environment for now, so just run it.
@@ -71,9 +71,9 @@ _panic(const char *file, int line, const char *fmt,...)
 	__asm __volatile("cli; cld");
 
 	va_start(ap, fmt);
-	cprintf("kernel panic at %s:%d: ", file, line);
+	cprintf("\033[1;34;47mkernel panic at %s:%d: ", file, line);
 	vcprintf(fmt, ap);
-	cprintf("\n");
+	cprintf("\033[0m\n");
 	va_end(ap);
 
 dead:

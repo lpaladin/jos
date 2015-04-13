@@ -267,6 +267,7 @@ mem_init(void)
 
 	// Some more checks, only possible after kern_pgdir is installed.
 	check_page_installed_pgdir();
+
 }
 
 // --------------------------------------------------------------
@@ -546,9 +547,22 @@ static uintptr_t user_mem_check_addr;
 //
 int
 user_mem_check(struct Env *env, const void *va, size_t len, int perm)
-{
+{ 
 	// LAB 3: Your code here.
+	uintptr_t addr, end = (uintptr_t) (va) + len;
+	pte_t *pte;
 
+	perm |= PTE_P;
+
+	for (addr = (uintptr_t) va; addr < end; addr += PGSIZE)
+	{
+		pte = pgdir_walk(env->env_pgdir, (void *) addr, 0);
+		if (!pte || (*pte & perm) != perm)
+		{
+			user_mem_check_addr = addr;
+			return -E_FAULT;
+		}
+	}
 	return 0;
 }
 
