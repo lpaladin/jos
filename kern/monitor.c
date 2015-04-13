@@ -638,7 +638,7 @@ mon_si(int argc, char **argv, struct Trapframe *tf)
 {
 	if (!tf)
 	{
-		cprintf("No environment available.\n");
+		cprintf("No environment running.\n");
 		return 0;
 	}
 	tf->tf_eflags |= FL_TF;
@@ -650,7 +650,7 @@ mon_exit(int argc, char **argv, struct Trapframe *tf)
 {
 	if (!tf)
 	{
-		cprintf("No environment available.\n");
+		cprintf("No environment running.\n");
 		return 0;
 	}
 	tf->tf_eflags &= ~FL_TF;
@@ -706,12 +706,22 @@ monitor(struct Trapframe *tf)
 {
 	char *buf;
 
-	cprintf("Welcome to the JOS kernel monitor!\n");
-	cprintf("Type 'help' for a list of commands.\n");
-	show_nextinstr(tf);
-
-	if (tf != NULL && !(tf->tf_eflags & FL_TF))
-		print_trapframe(tf);
+	if (tf == NULL)
+	{
+		cprintf("Welcome to the JOS kernel monitor!\n");
+		cprintf("Currently no environment running.\n");
+		cprintf("Type 'help' for a list of commands.\n");
+	} 
+	else
+	{
+		if (!(tf->tf_eflags & FL_TF))
+		{
+			cprintf("Welcome to the JOS kernel monitor!\n");
+			cprintf("Type 'help' for a list of commands.\n");
+			print_trapframe(tf);
+		}
+		show_nextinstr(tf);
+	}
 
 	while (1) {
 		buf = readline("K> ");
@@ -756,6 +766,6 @@ show_nextinstr(struct Trapframe *tf)
 		return;
 	disassemble_init(0, ATT_SYNTAX);
 	sprint_address(buf, 1023, (void *)tf->tf_eip);
-	cprintf("\033[1;34;43mCurrent Instruction\033[0m: \033[1;37;41m%s\033[0m\n", buf);
+	cprintf("\033[1;34;43mCurrent Instruction[0x%08x]\033[0m: \033[1;37;41m%s\033[0m\n", tf->tf_eip, buf);
 	disassemble_cleanup();
 }
