@@ -369,6 +369,8 @@ int
 mon_testint(int argc, char **argv, struct Trapframe *tf)
 {
 	uint16_t id = strtol(argv[1], NULL, 10);
+
+	// 运行一条 int $x 指令
 	switch (id)
 	{
 #if 1
@@ -641,6 +643,8 @@ mon_si(int argc, char **argv, struct Trapframe *tf)
 		cprintf("No environment running.\n");
 		return 0;
 	}
+
+	// 开启单步并退出 monitor
 	tf->tf_eflags |= FL_TF;
 	return -1;
 }
@@ -653,6 +657,8 @@ mon_exit(int argc, char **argv, struct Trapframe *tf)
 		cprintf("No environment running.\n");
 		return 0;
 	}
+
+	// 关闭单步并退出 monitor
 	tf->tf_eflags &= ~FL_TF;
 	return -1;
 }
@@ -766,6 +772,6 @@ show_nextinstr(struct Trapframe *tf)
 		return;
 	disassemble_init(0, ATT_SYNTAX);
 	sprint_address(buf, 1023, (void *)tf->tf_eip);
-	cprintf("\033[1;34;43mCurrent Instruction[0x%08x]\033[0m: \033[1;37;41m%s\033[0m\n", tf->tf_eip, buf);
+	cprintf("\033[1;34;43mCurrent instruction [0x%08x]\033[0m: \033[1;37;41m%s\033[0m\n", tf->tf_eip, buf);
 	disassemble_cleanup();
 }
