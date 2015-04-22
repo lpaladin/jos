@@ -30,6 +30,8 @@ struct Pseudodesc idt_pd = {
 	sizeof(idt) - 1, (uint32_t) idt
 };
 
+// 处理器是否支持 MSR 寄存器
+int msr_supported;
 
 static const char *trapname(int trapno)
 {
@@ -65,13 +67,33 @@ static const char *trapname(int trapno)
 	return "(unknown trap)";
 }
 
+typedef void (*handler)(void);
+extern handler _handler_array[];
 
 void
 trap_init(void)
 {
+	int i;
+	uint32_t cpuid_edx, a1, a2;
 	extern struct Segdesc gdt[];
+	extern handler _syscall_handler;
+
+	cpuid(1, NULL, NULL, NULL, &cpuid_edx);
+	msr_supported = (cpuid_edx >> CPUID_EDX_MSR_BIT) & 1;
+
+	if (msr_supported)
+	{
+		// 下面那个取地址是为了对抗 GCC 很奇怪的行为（如果不加会把参数当成地址而不是立即数）
+		wrmsr(MSR_IA32_SYSENTER_CS, GD_KT, 0);
+		wrmsr(MSR_IA32_SYSENTER_ESP, &ts.ts_esp0, 0);
+		wrmsr(MSR_IA32_SYSENTER_EIP, &_syscall_handler, 0);
+		cprintf("\033[1;31;45mMSR is supported - ready to support sysenter\033[0m\n");
+	}
 
 	// LAB 3: Your code here.
+	for (i = 0; i < 256; i++)
+		SETGATE(idt[i], true, GD_KT, _handler_array[i], 
+		i == T_BRKPT || i == T_SYSCALL ? 3 : 0);
 
 	// Per-CPU setup 
 	trap_init_percpu();
@@ -116,6 +138,7 @@ trap_init_percpu(void)
 
 	// Load the TSS selector (like other segment selectors, the
 	// bottom three bits are special; we leave them 0)
+
 	ltr(GD_TSS0);
 
 	// Load the IDT
@@ -173,6 +196,24 @@ trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
+	switch (tf->tf_trapno) 
+	{
+	case T_PGFLT:
+		return page_fault_handler(tf);
+	case T_DEBUG:
+		if (!(tf->tf_eflags & FL_TF))
+			break;
+	case T_BRKPT:
+		return monitor(tf);
+	case T_SYSCALL:
+		return (void) (tf->tf_regs.reg_eax = syscall(
+			tf->tf_regs.reg_eax,
+			tf->tf_regs.reg_edx,
+			tf->tf_regs.reg_ecx,
+			tf->tf_regs.reg_ebx,
+			tf->tf_regs.reg_edi,
+			tf->tf_regs.reg_esi));
+	}
 
 	// Handle spurious interrupts
 	// The hardware sometimes raises these because of noise on the
@@ -268,6 +309,8 @@ page_fault_handler(struct Trapframe *tf)
 	// Handle kernel-mode page faults.
 
 	// LAB 3: Your code here.
+	if (tf->tf_cs == GD_KT)
+		panic("page_fault_handler: page fault occured in kernel mode");
 
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.

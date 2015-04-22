@@ -13,6 +13,8 @@
 extern struct Gatedesc idt[];
 extern struct Pseudodesc idt_pd;
 
+extern int msr_supported;
+
 void trap_init(void);
 void trap_init_percpu(void);
 void print_regs(struct PushRegs *regs);
