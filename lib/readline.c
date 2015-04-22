@@ -11,12 +11,13 @@ readline(const char *prompt)
 
 	if (prompt != NULL)
 		cprintf("%s", prompt);
-
+	cprintf("\033[1;35m");
 	i = 0;
 	echoing = iscons(0);
 	while (1) {
 		c = getchar();
 		if (c < 0) {
+			cprintf("\033[0m");
 			cprintf("read error: %e\n", c);
 			return NULL;
 		} else if ((c == '\b' || c == '\x7f') && i > 0) {
@@ -31,6 +32,7 @@ readline(const char *prompt)
 			if (echoing)
 				cputchar('\n');
 			buf[i] = 0;
+			cprintf("\033[0m");
 			return buf;
 		}
 	}
