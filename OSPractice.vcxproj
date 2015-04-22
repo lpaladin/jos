@@ -64,18 +64,25 @@
     <ClCompile Include="kern\init.c" />
     <ClCompile Include="kern\kclock.c" />
     <ClCompile Include="kern\kdebug.c" />
+    <ClCompile Include="kern\lapic.c" />
     <ClCompile Include="kern\libdisasm\i386.c" />
-    <ClCompile Include="kern\libdisasm\i386.opcode.map" />
     <ClCompile Include="kern\libdisasm\libdis.c" />
     <ClCompile Include="kern\monitor.c" />
+    <ClCompile Include="kern\mpconfig.c" />
+    <ClCompile Include="kern\picirq.c" />
     <ClCompile Include="kern\pmap.c" />
     <ClCompile Include="kern\printf.c" />
+    <ClCompile Include="kern\sched.c" />
+    <ClCompile Include="kern\spinlock.c" />
     <ClCompile Include="kern\syscall.c" />
     <ClCompile Include="kern\trap.c" />
     <ClCompile Include="lib\console.c" />
     <ClCompile Include="lib\exit.c" />
+    <ClCompile Include="lib\fork.c" />
+    <ClCompile Include="lib\ipc.c" />
     <ClCompile Include="lib\libmain.c" />
     <ClCompile Include="lib\panic.c" />
+    <ClCompile Include="lib\pgfault.c" />
     <ClCompile Include="lib\printf.c" />
     <ClCompile Include="lib\printfmt.c" />
     <ClCompile Include="lib\readline.c" />
@@ -114,6 +121,7 @@
     <ClInclude Include="inc\types.h" />
     <ClInclude Include="inc\x86.h" />
     <ClInclude Include="kern\console.h" />
+    <ClInclude Include="kern\cpu.h" />
     <ClInclude Include="kern\env.h" />
     <ClInclude Include="kern\kclock.h" />
     <ClInclude Include="kern\kdebug.h" />
@@ -124,12 +132,14 @@
     <ClInclude Include="kern\libdisasm\libdis.h" />
     <ClInclude Include="kern\libdisasm\vm.h" />
     <ClInclude Include="kern\monitor.h" />
+    <ClInclude Include="kern\picirq.h" />
     <ClInclude Include="kern\pmap.h" />
+    <ClInclude Include="kern\sched.h" />
+    <ClInclude Include="kern\spinlock.h" />
     <ClInclude Include="kern\syscall.h" />
     <ClInclude Include="kern\trap.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="kern\trapentry.S" />
     <None Include="obj\boot\boot.asm" />
     <None Include="obj\kern\kernel.asm" />
   </ItemGroup>
