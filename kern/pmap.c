@@ -298,6 +298,14 @@ mem_init_mp(void)
 	//
 	// LAB 4: Your code here:
 
+	int i;
+	for (i = 0; i < NCPU; i++)
+	{
+		boot_map_region(kern_pgdir, KSTACKTOP - (i + 1) * KSTKSIZE - (i + 1) * KSTKGAP, KSTKGAP,
+			0, 0);
+		boot_map_region(kern_pgdir, KSTACKTOP - (i + 1) * KSTKSIZE - i * KSTKGAP, KSTKSIZE,
+			PADDR(percpu_kstacks[i]), PTE_W | PTE_P);
+	}
 }
 
 // --------------------------------------------------------------
@@ -337,10 +345,11 @@ page_init(void)
 	// NB: DO NOT actually touch the physical memory corresponding to
 	// free pages!
 	size_t i, offset;
-	physaddr_t kernel_top = PADDR(boot_alloc(0));
+	physaddr_t kernel_top = PADDR(boot_alloc(0)),
+		mpentry = MPENTRY_PADDR;
 	for (i = 0; i < npages; i++) {
 		offset = i * PGSIZE;
-		if (i == 0 || (i >= npages_basemem && offset < kernel_top))
+		if (i == 0 || (i >= npages_basemem && offset < kernel_top) || offset == mpentry)
 			continue;
 		pages[i].pp_ref = 0;
 		pages[i].pp_link = page_free_list;
@@ -591,7 +600,15 @@ mmio_map_region(physaddr_t pa, size_t size)
 	// Hint: The staff solution uses boot_map_region.
 	//
 	// Your code here:
-	panic("mmio_map_region not implemented");
+
+	size = ROUNDUP(size, PGSIZE);
+	if (size >= MMIOLIM - base) // 这种写法防止溢出
+		panic("mmio_map_region: overflow");
+	boot_map_region(kern_pgdir, base, size, pa, PTE_PCD | PTE_PWT | PTE_W | PTE_P);
+
+	base += size;
+	return (void *)(base - size);
+	// panic("mmio_map_region not implemented");
 }
 
 static uintptr_t user_mem_check_addr;

@@ -93,15 +93,32 @@
     <ClCompile Include="user\buggyhello.c" />
     <ClCompile Include="user\buggyhello2.c" />
     <ClCompile Include="user\divzero.c" />
+    <ClCompile Include="user\dumbfork.c" />
     <ClCompile Include="user\evilhello.c" />
+    <ClCompile Include="user\fairness.c" />
+    <ClCompile Include="user\faultalloc.c" />
+    <ClCompile Include="user\faultallocbad.c" />
+    <ClCompile Include="user\faultbadhandler.c" />
+    <ClCompile Include="user\faultdie.c" />
+    <ClCompile Include="user\faultevilhandler.c" />
+    <ClCompile Include="user\faultnostack.c" />
     <ClCompile Include="user\faultread.c" />
     <ClCompile Include="user\faultreadkernel.c" />
+    <ClCompile Include="user\faultregs.c" />
     <ClCompile Include="user\faultwrite.c" />
     <ClCompile Include="user\faultwritekernel.c" />
+    <ClCompile Include="user\forktree.c" />
     <ClCompile Include="user\hello.c" />
+    <ClCompile Include="user\idle.c" />
+    <ClCompile Include="user\pingpong.c" />
+    <ClCompile Include="user\pingpongs.c" />
+    <ClCompile Include="user\primes.c" />
     <ClCompile Include="user\sendpage.c" />
     <ClCompile Include="user\softint.c" />
+    <ClCompile Include="user\spin.c" />
+    <ClCompile Include="user\stresssched.c" />
     <ClCompile Include="user\testbss.c" />
+    <ClCompile Include="user\yield.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\assert.h" />
