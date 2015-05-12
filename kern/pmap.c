@@ -13,6 +13,9 @@
 
 #define dbgprintf(...) cprintf(__VA_ARGS__)
 
+// Lab 4 以后 PSE 会产生严重问题，所以就关闭吧
+#define ALLOW_PSE 0
+
 // These variables are set by i386_detect_memory()
 size_t npages;			// Amount of physical memory (in pages)
 static size_t npages_basemem;	// Amount of base memory (in pages)
@@ -135,7 +138,7 @@ mem_init(void)
 
 	// 通过 CPUID 检查 CPU 对 PSE（页面大小扩展）特性的支持情况
 	cpuid(1, NULL, NULL, NULL, &cpuid_edx);
-	support_pse = (cpuid_edx >> CPUID_EDX_PSE_BIT) & 1;
+	support_pse = (cpuid_edx >> CPUID_EDX_PSE_BIT) & ALLOW_PSE;
 
 	// Remove this line when you're ready to test this function.
 	// panic("mem_init: This function is not finished\n");
