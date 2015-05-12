@@ -29,7 +29,7 @@ pgfault(struct UTrapframe *utf)
 	addr = ROUNDDOWN(addr, PGSIZE);
 
 	if (!(err & FEC_WR) || !(pte & PTE_COW))
-		panic("pgfault: unable to handle page fault, access = %x, pte = %x, addr = %x", err, pte, addr);
+		panic("pgfault: unable to handle page fault, eip = %x, access = %x, pte = %x, addr = %x", utf->utf_eip, err, pte, addr);
 
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
@@ -126,17 +126,18 @@ fork(void)
 		return child;
 	else if (child == 0)
 	{
-		thisenv = envs + sys_getenvid();
+		thisenv = envs + ENVX(sys_getenvid());
 		return 0;
 	}
 
+	// COW方式映射所有非异常栈区域
 	for (pdeid = 0; ; pdeid++)
 		if (uvpd[pdeid] & PTE_P)
 		{
 			temp = pdeid * NPDENTRIES;
 			for (pteid = 0; pteid < NPDENTRIES; pteid++)
 			{
-				if (temp + pteid >= (UXSTACKTOP / PGSIZE - 1))
+				if (temp + pteid >= UXSTACKTOP / PGSIZE - 1)
 					goto copyend;
 				if (uvpt[temp + pteid] & PTE_P)
 				{
@@ -149,6 +150,7 @@ fork(void)
 
 	copyend:
 
+	// 复制异常栈
 	error = sys_page_alloc(child, (void *)(UXSTACKTOP - PGSIZE), PTE_U | PTE_W | PTE_P);
 	if (error < 0)
 		panic("fork: sys_page_alloc failed (%e)", error);
@@ -163,6 +165,7 @@ fork(void)
 	if (error < 0)
 		panic("fork: sys_page_unmap failed (%e)", error);
 
+	// 设置页面错误回调
 	error = sys_env_set_pgfault_upcall(child, _pgfault_upcall);
 	if (error < 0)
 		panic("fork: sys_env_set_pgfault_upcall failed (%e)", error);

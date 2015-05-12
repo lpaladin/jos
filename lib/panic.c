@@ -14,10 +14,10 @@ _panic(const char *file, int line, const char *fmt, ...)
 	va_start(ap, fmt);
 
 	// Print the panic message
-	cprintf("[%08x] user panic in %s at %s:%d: ",
+	cprintf("\033[1;35;47m[%08x] user panic in %s at %s:%d: ",
 		sys_getenvid(), binaryname, file, line);
 	vcprintf(fmt, ap);
-	cprintf("\n");
+	cprintf("\033[0m\n");
 
 	// Cause a breakpoint exception
 	while (1)
