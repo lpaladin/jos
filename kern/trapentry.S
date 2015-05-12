@@ -332,15 +332,6 @@ _alltraps:
 	push	%es
 	pushal
 
-	/* Lab4 保证内核态屏蔽中断 */
-	pushf
-	pop		%ax
-	mov		$FL_IF, %bx
-	not		%bx
-	and		%bx, %ax
-	push	%ax
-	popf
-
 	movw	$GD_KD, %ax
 	movw	%ax, %ds
 	movw	%ax, %es

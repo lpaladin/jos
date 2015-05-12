@@ -32,7 +32,7 @@ sched_yield(void)
 	// LAB 4: Your code here.
 
 	if (cur)
-		base = cur->env_id;
+		base = ENVX(cur->env_id);
 
 	for (i = 0; i < NENV; i++)
 		if (envs[(i + base) % NENV].env_status == ENV_RUNNABLE)

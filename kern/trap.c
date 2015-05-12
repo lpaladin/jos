@@ -92,7 +92,7 @@ trap_init(void)
 
 	// LAB 3: Your code here.
 	for (i = 0; i < 256; i++)
-		SETGATE(idt[i], true, GD_KT, _handler_array[i], 
+		SETGATE(idt[i], false, GD_KT, _handler_array[i], 
 		i == T_BRKPT || i == T_SYSCALL ? 3 : 0);
 
 	// Per-CPU setup 
@@ -320,8 +320,8 @@ page_fault_handler(struct Trapframe *tf)
 	// LAB 3: Your code here.
 	if (tf->tf_cs == GD_KT)
 	{
-		print_trapframe(tf);
-		panic("page_fault_handler: page fault occured in kernel mode");
+		panic("page_fault_handler: page fault occured in kernel mode while code at %x trying to access %x with &pte = %x",
+			tf->tf_eip, fault_va, pgdir_walk(kern_pgdir, (void *)fault_va, false));
 	}
 
 	// We've already handled kernel-mode exceptions, so if we get here,

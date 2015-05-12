@@ -66,14 +66,22 @@ mon_kerninfo(int argc, char **argv, struct Trapframe *tf)
 	return 0;
 }
 
+#define MAX_LINE_FOR_MORE 23
+
 int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
-	uint32_t ebp = read_ebp(), eip, i;
+	uint32_t ebp = read_ebp(), eip, i, line_count = 0;
 	struct Eipdebuginfo info;
 	cprintf("Stack backtrace:\n");
 	for (; ebp != 0; ebp = READ_ADDR(ebp))
 	{
+		if ((line_count += 2) >= MAX_LINE_FOR_MORE)
+		{
+			cprintf("\033[1;31;47m--- Press any key for more ---\033[0m\n");
+			getchar();
+			line_count = 0;
+		}
 		eip = READ_ADDR(ebp + 4);
 
 		// 函数栈帧基本信息
@@ -89,8 +97,6 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	}
 	return 0;
 }
-
-#define MAX_LINE_FOR_MORE 23
 
 int
 mon_showmappings(int argc, char **argv, struct Trapframe *tf)
