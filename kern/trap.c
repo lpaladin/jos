@@ -266,6 +266,7 @@ trap(struct Trapframe *tf)
 		// Acquire the big kernel lock before doing any
 		// serious kernel work.
 		// LAB 4: Your code here.
+		lock_kernel();
 		assert(curenv);
 
 		// Garbage collect if current enviroment is a zombie
@@ -304,6 +305,7 @@ void
 page_fault_handler(struct Trapframe *tf)
 {
 	uint32_t fault_va;
+	struct UTrapframe *utf;
 
 	// Read processor's CR2 register to find the faulting address
 	fault_va = rcr2();
@@ -346,6 +348,37 @@ page_fault_handler(struct Trapframe *tf)
 	//   (the 'tf' variable points at 'curenv->env_tf').
 
 	// LAB 4: Your code here.
+	if (curenv->env_pgfault_upcall)
+	{
+		// 判断 esp 是否已经在异常栈中
+		if (tf->tf_esp >= UXSTACKTOP - PGSIZE && tf->tf_esp <= UXSTACKTOP - 1)
+		{
+			utf = ((struct UTrapframe *) (tf->tf_esp - 4)) - 1;
+		}
+		else
+		{
+			utf = ((struct UTrapframe *) (UXSTACKTOP)) - 1;
+		}
+
+		user_mem_assert(curenv, utf, sizeof(struct UTrapframe), PTE_U | PTE_W);
+
+		if ((uint32_t) utf >= UXSTACKTOP - PGSIZE)
+		{
+			utf->utf_fault_va = fault_va;
+			utf->utf_eip = tf->tf_eip;
+			utf->utf_err = tf->tf_err;
+			utf->utf_esp = tf->tf_esp;
+			utf->utf_eflags = tf->tf_eflags;
+			utf->utf_regs = tf->tf_regs;
+
+			tf->tf_esp = (uint32_t) utf;
+
+			tf->tf_eip = (uint32_t)curenv->env_pgfault_upcall;
+
+			env_run(curenv);
+			return;
+		}
+	}
 
 	// Destroy the environment that caused the fault.
 	cprintf("[%08x] user fault va %08x ip %08x\n",

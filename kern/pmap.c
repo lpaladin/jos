@@ -231,7 +231,11 @@ mem_init(void)
 	{
 		// 使用页大小扩展特性（PSE）向页目录表插入 4MB 页表项
 		dbgprintf("\033[1;31;46mPSEMapRegion\033[0m\n");
-		for (n = 0; n < (uint32_t) -KERNBASE; n += PTSIZE)
+
+		// 解决已知的 SMP 与 PSE 冲突的 Bug（http://osdir.com/ml/freebsd.devel.smp/2002-03/msg00018.html）
+		boot_map_region(kern_pgdir, KERNBASE, PTSIZE, 0, PTE_W | PTE_P);
+
+		for (n = PTSIZE; n < (uint32_t) -KERNBASE; n += PTSIZE)
 			kern_pgdir[PDX(KERNBASE + n)] = n | PTE_PS | PTE_W | PTE_P;
 	} else
 		boot_map_region(kern_pgdir, KERNBASE, -KERNBASE, 0, PTE_W | PTE_P);
@@ -646,6 +650,8 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 		if (!pte || (*pte & perm) != perm)
 		{
 			user_mem_check_addr = addr;
+			if (!pte) cprintf("PTE Not exist\n");
+			else cprintf("PTE Perm incorrect: %x & %x = %x\n", *pte, perm, (*pte & perm));
 			return -E_FAULT;
 		}
 	}
