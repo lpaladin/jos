@@ -592,6 +592,33 @@ sys_env_set_other_exception_upcall(envid_t envid, void *func)
 	return 0;
 }
 
+// Lab 4 挑战 7：批量系统调用
+// 处理一批系统调用
+// 返回负值时中止
+// 注意第一个参数最后一项应该是 0xFFFFFFFF 用于表示结束
+static int
+sys_run_batch_syscall(uint32_t *syscallno, uint32_t **arguarray)
+{
+	int i, err;
+
+	if (user_mem_check(curenv, syscallno, 4, PTE_U | PTE_P) ||
+		user_mem_check(curenv, arguarray, 20, PTE_U | PTE_P) ||
+		user_mem_check(curenv, arguarray[0], 4, PTE_U | PTE_P) ||
+		user_mem_check(curenv, arguarray[1], 4, PTE_U | PTE_P) ||
+		user_mem_check(curenv, arguarray[2], 4, PTE_U | PTE_P) ||
+		user_mem_check(curenv, arguarray[3], 4, PTE_U | PTE_P) ||
+		user_mem_check(curenv, arguarray[4], 4, PTE_U | PTE_P))
+		return -E_INVAL;
+
+	for (i = 0; i < 64 && syscallno[i] != 0xFFFFFFFF; i++)
+	{
+		err = syscall(syscallno[i], arguarray[0][i], arguarray[1][i], arguarray[2][i], arguarray[3][i], arguarray[4][i]);
+		if (err < 0)
+			return err;
+	}
+	return 0;
+}
+
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
 syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
@@ -637,6 +664,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		return sys_restore_state(a1);
 	case 130: // SYS_env_set_other_exception_upcall
 		return sys_env_set_other_exception_upcall(a1, (void *)a2);
+	case 131: // SYS_run_batch_syscall
+		return sys_run_batch_syscall((uint32_t *)a1, (uint32_t **)a2);
 	default:
 		return -E_NO_SYS;
 	}

@@ -20,6 +20,12 @@ libmain(int argc, char **argv)
 	// LAB 3: Your code here.
 	thisenv = envs + ENVX(sys_getenvid());
 
+
+	// Lab 4 挑战 7：批量系统调用
+	// 记录缓存页号，用于让批量系统调用避开缓存页
+	batch_begin_pgnum = ROUNDDOWN((uint32_t)&in_batch_state, PGSIZE) / PGSIZE,
+		batch_end_pgnum = ROUNDUP((uint32_t)(batch_argu + 4), PGSIZE) / PGSIZE;
+
 	// save the name of the program so that panic() can use it
 	if (argc > 0)
 		binaryname = argv[0];

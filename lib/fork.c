@@ -130,6 +130,10 @@ fork(void)
 		return 0;
 	}
 
+	// Lab 4 挑战 7：批量系统调用
+	// 开始记录系统调用到缓存
+	begin_batchcall();
+
 	// COW方式映射所有非异常栈区域
 	for (pdeid = 0; ; pdeid++)
 		if (uvpd[pdeid] & PTE_P)
@@ -139,6 +143,18 @@ fork(void)
 			{
 				if (temp + pteid >= UXSTACKTOP / PGSIZE - 1)
 					goto copyend;
+				if (temp + pteid == batch_begin_pgnum)
+				{
+					// 提交所有系统调用
+					error = end_batchcall();
+					if (error < 0)
+						panic("fork: end_batchcall failed (%e)", error);
+				}
+				if (temp + pteid == batch_end_pgnum + 1)
+				{
+					// 开始记录系统调用到缓存
+					begin_batchcall();
+				}
 				if (uvpt[temp + pteid] & PTE_P)
 				{
 					error = duppage(child, temp + pteid);
@@ -148,7 +164,12 @@ fork(void)
 			}
 		}
 
-	copyend:
+copyend:
+
+	// 提交所有系统调用
+	error = end_batchcall();
+	if (error < 0)
+		panic("fork: end_batchcall failed (%e)", error);
 
 	// 复制异常栈
 	error = sys_page_alloc(child, (void *)(UXSTACKTOP - PGSIZE), PTE_U | PTE_W | PTE_P);

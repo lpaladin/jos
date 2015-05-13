@@ -62,6 +62,12 @@ int	sys_ipc_recv(void *rcv_pg);
 int	sys_capture_state(envid_t);
 int	sys_restore_state(envid_t);
 int	sys_env_set_other_exception_upcall(envid_t env, void *upcall);
+int begin_batchcall();
+int end_batchcall();
+
+extern bool in_batch_state;
+extern uint32_t *batch_argu[5];
+uint32_t batch_begin_pgnum, batch_end_pgnum;
 
 // This must be inlined.  Exercise for reader: why?
 static __inline envid_t __attribute__((always_inline))
