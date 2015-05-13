@@ -93,6 +93,7 @@
     <ClCompile Include="user\buggyhello.c" />
     <ClCompile Include="user\buggyhello2.c" />
     <ClCompile Include="user\divzero.c" />
+    <ClCompile Include="user\divzerohandler.c" />
     <ClCompile Include="user\dumbfork.c" />
     <ClCompile Include="user\evilhello.c" />
     <ClCompile Include="user\fairness.c" />
@@ -110,6 +111,8 @@
     <ClCompile Include="user\forktree.c" />
     <ClCompile Include="user\hello.c" />
     <ClCompile Include="user\idle.c" />
+    <ClCompile Include="user\sfork.c" />
+    <ClCompile Include="user\testcapturestate.c" />
     <ClCompile Include="user\pingpong.c" />
     <ClCompile Include="user\pingpongs.c" />
     <ClCompile Include="user\primes.c" />
@@ -157,6 +160,12 @@
     <ClInclude Include="kern\trap.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="kern\entry.S" />
+    <None Include="kern\mpentry.S" />
+    <None Include="kern\trapentry.S" />
+    <None Include="lib\entry.S" />
+    <None Include="lib\oeentry.S" />
+    <None Include="lib\pfentry.S" />
     <None Include="obj\boot\boot.asm" />
     <None Include="obj\kern\kernel.asm" />
   </ItemGroup>

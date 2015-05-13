@@ -145,3 +145,20 @@ sys_ipc_recv(void *dstva)
 	return syscall(SYS_ipc_recv, 1, (uint32_t)dstva, 0, 0, 0, 0);
 }
 
+int
+sys_capture_state(envid_t envid)
+{
+	return syscall(128, 1, envid, 0, 0, 0, 0);
+}
+
+int
+sys_restore_state(envid_t envid)
+{
+	return syscall(129, 1, envid, 0, 0, 0, 0);
+}
+
+int
+sys_env_set_other_exception_upcall(envid_t envid, void *upcall)
+{
+	return syscall(130, 1, envid, (uint32_t)upcall, 0, 0, 0);
+}

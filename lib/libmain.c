@@ -5,12 +5,17 @@
 
 extern void umain(int argc, char **argv);
 
-const volatile struct Env *thisenv;
+// Lab 4 挑战 6：实现共享内存的 fork
+// 对 thisenv 的 hack
+const volatile struct Env **_thisenv_addr;
 const char *binaryname = "<unknown>";
 
 void
 libmain(int argc, char **argv)
 {
+	const volatile struct Env *_thisenv;
+	_thisenv_addr = &_thisenv;
+
 	// set thisenv to point at our Env structure in envs[].
 	// LAB 3: Your code here.
 	thisenv = envs + ENVX(sys_getenvid());

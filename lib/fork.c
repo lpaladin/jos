@@ -178,10 +178,78 @@ fork(void)
 	// panic("fork not implemented");
 }
 
-// Challenge!
+// Lab 4 挑战 6：实现共享内存的 fork
 int
 sfork(void)
 {
-	panic("sfork not implemented");
-	return -E_INVAL;
+	envid_t child;
+	int error;
+	uint32_t pdeid, pteid, temp;
+	extern void _pgfault_upcall(void);
+
+	set_pgfault_handler(pgfault);
+	child = sys_exofork();
+	if (child < 0)
+		return child;
+	else if (child == 0)
+	{
+		thisenv = envs + ENVX(sys_getenvid());
+		return 0;
+	}
+
+	// 直接映射方式映射所有非栈区域，COW方式映射栈
+	for (pdeid = 0;; pdeid++)
+		if (uvpd[pdeid] & PTE_P)
+		{
+			temp = pdeid * NPDENTRIES;
+			for (pteid = 0; pteid < NPDENTRIES; pteid++)
+			{
+				if (temp + pteid >= UXSTACKTOP / PGSIZE - 1)
+					goto copyend;
+				if (uvpt[temp + pteid] & PTE_P)
+				{
+					if (temp + pteid >= USTACKTOP / PGSIZE - 1)
+					{
+						error = duppage(child, temp + pteid);
+						if (error < 0)
+							panic("sfork: duppage failed (%e)", error);
+					}
+					else
+					{
+						void *addr = (void *)((temp + pteid) * PGSIZE);
+						error = sys_page_map(0, addr, child, addr, uvpt[temp + pteid] & PTE_SYSCALL);
+						if (error < 0)
+							panic("sfork: sys_page_map failed (%e)", error);
+					}
+				}
+			}
+		}
+
+copyend:
+
+	// 复制异常栈
+	error = sys_page_alloc(child, (void *)(UXSTACKTOP - PGSIZE), PTE_U | PTE_W | PTE_P);
+	if (error < 0)
+		panic("fork: sys_page_alloc failed (%e)", error);
+
+	error = sys_page_map(child, (void *)(UXSTACKTOP - PGSIZE), 0, UTEMP, PTE_U | PTE_W | PTE_P);
+	if (error < 0)
+		panic("fork: sys_page_map failed (%e)", error);
+
+	memcpy(UTEMP, (void *)(UXSTACKTOP - PGSIZE), PGSIZE);
+
+	error = sys_page_unmap(0, UTEMP);
+	if (error < 0)
+		panic("fork: sys_page_unmap failed (%e)", error);
+
+	// 设置页面错误回调
+	error = sys_env_set_pgfault_upcall(child, _pgfault_upcall);
+	if (error < 0)
+		panic("fork: sys_env_set_pgfault_upcall failed (%e)", error);
+
+	error = sys_env_set_status(child, ENV_RUNNABLE);
+	if (error < 0)
+		panic("fork: sys_env_set_status failed (%e)", error);
+
+	return child;
 }

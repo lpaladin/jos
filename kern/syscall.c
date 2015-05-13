@@ -420,6 +420,178 @@ sys_ipc_recv(void *dstva)
 	return 0;
 }
 
+// Lab 4 挑战 4：实现进程的时空穿越
+
+static struct Env saved_env;
+static struct PageInfo *saved_pages[1024];
+static pde_t saved_pgdir[NPDENTRIES];
+static pte_t *saved_pgtab[NPDENTRIES];
+
+// 保存进程状态的系统调用
+// 注意整个系统中只有一个存储空间
+// 如果有进程调用过，那么在没有使用这个状态恢复原本进程之前
+// 不能再次分配
+static int
+sys_capture_state(envid_t envid)
+{
+	struct Env *env;
+	struct PageInfo *p;
+	pde_t *pgdir, pde;
+	pte_t *pte;
+	uint32_t temp, va, offset, pgcount = 0;
+	int error;
+
+	if (saved_pages[0])
+	{
+		if (envs[ENVX(saved_env.env_id)].env_status == ENV_DYING || envs[ENVX(saved_env.env_id)].env_status == ENV_FREE)
+		{
+			// 清空存储
+			for (va = 0; va < UTOP;)
+				if ((pde = saved_pgdir[PDX(va)]) & PTE_P)
+				{
+					page_free(pa2page(PADDR(saved_pgtab[PDX(va)])));
+				}
+
+			for (va = 0; va < UTOP;)
+			{
+				if ((pde = pgdir[PDX(va)]) & PTE_P)
+				{
+					for (offset = 0; offset < NPTENTRIES; offset++)
+					{
+						pte = (pte_t *)KADDR(PTE_ADDR(pde)) + PTX(va + offset * PGSIZE);
+						if (*pte & PTE_P)
+						{
+							page_free(saved_pages[pgcount]);
+							pgcount++;
+						}
+					}
+				}
+				va += PTSIZE;
+			}
+
+			saved_pages[0] = NULL;
+			pgcount = 0;
+		}
+		else
+			return -E_NO_MEM;
+	}
+
+	error = envid2env(envid, &env, true);
+	if (error)
+		return error;
+
+	saved_env = *env;
+
+	pgdir = env->env_pgdir;
+
+	memset(saved_pages, 0, sizeof(saved_pages));
+	memset(saved_pgdir, 0, sizeof(saved_pgdir));
+	memset(saved_pgtab, 0, sizeof(saved_pgtab));
+
+	// 保存页目录
+	memcpy(saved_pgdir, pgdir, PGSIZE);
+
+	for (va = 0; va < UTOP; )
+	{
+		if ((pde = pgdir[PDX(va)]) & PTE_P)
+		{
+			// 保存页表
+			cprintf("Saving PTE table...\n");
+			saved_pgtab[PDX(va)] = memcpy(page2kva(page_alloc(0)), KADDR(PTE_ADDR(pde)), PGSIZE);
+			for (offset = 0; offset < NPTENTRIES; offset++)
+			{
+				pte = (pte_t *)KADDR(PTE_ADDR(pde)) + PTX(va + offset * PGSIZE);
+				if (*pte & PTE_P)
+				{
+					cprintf("Copying page content...\n");
+					// 复制页面到临时存储
+					saved_pages[pgcount] = page_alloc(0);
+					memcpy(page2kva(saved_pages[pgcount]), KADDR(PTE_ADDR(*pte)), PGSIZE);
+					pgcount++;
+				}
+			}
+		}
+		va += PTSIZE;
+	}
+
+	return 0;
+}
+
+// 恢复进程状态的系统调用
+static int
+sys_restore_state(envid_t envid)
+{
+	struct Env *env;
+	struct PageInfo *p;
+	pde_t *pgdir, pde;
+	pte_t *pte;
+	uint32_t temp, va, offset, pgcount = 0;
+	int error;
+
+	if (!saved_pages[0])
+		return -E_INVAL;
+
+	error = envid2env(envid, &env, true);
+	if (error)
+		return error;
+
+	if (env->env_id != saved_env.env_id)
+		return -E_BAD_ENV;
+
+	*env = saved_env;
+
+	// 恢复页表
+	cprintf("Restoring PTE table...\n");
+	memcpy(pgdir = env->env_pgdir, saved_pgdir, PGSIZE);
+	for (va = 0; va < UTOP; va += PTSIZE)
+		if ((pde = pgdir[PDX(va)]) & PTE_P)
+		{
+			memcpy(KADDR(PTE_ADDR(pde)), saved_pgtab[PDX(va)], PGSIZE);
+			page_free(pa2page(PADDR(saved_pgtab[PDX(va)])));
+		}
+
+	cprintf("Restoring pages...\n");
+	for (va = 0; va < UTOP;)
+	{
+		if ((pde = pgdir[PDX(va)]) & PTE_P)
+		{
+			for (offset = 0; offset < NPTENTRIES; offset++)
+			{
+				pte = (pte_t *)KADDR(PTE_ADDR(pde)) + PTX(va + offset * PGSIZE);
+				if (*pte & PTE_P)
+				{
+					cprintf("Copying page content...\n");
+					// 恢复页面内容
+					memcpy(KADDR(PTE_ADDR(*pte)), page2kva(saved_pages[pgcount]), PGSIZE);
+					page_free(saved_pages[pgcount]);
+					pgcount++;
+				}
+			}
+		}
+		va += PTSIZE;
+	}
+
+	saved_pages[0] = NULL;
+
+	return 0;
+}
+
+// Lab 4 挑战 5：允许用户处理更多异常
+// 设置异常处理程序
+static int
+sys_env_set_other_exception_upcall(envid_t envid, void *func)
+{
+	struct Env *env;
+	int error;
+
+	error = envid2env(envid, &env, true);
+	if (error)
+		return error;
+
+	env->env_other_exception_upcall = func;
+	return 0;
+}
+
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
 syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
@@ -459,6 +631,12 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		return sys_ipc_try_send(a1, a2, (void *)a3, a4);
 	case SYS_ipc_recv:
 		return sys_ipc_recv((void *)a1);
+	case 128: // SYS_capture_state
+		return sys_capture_state(a1);
+	case 129: // SYS_restore_state
+		return sys_restore_state(a1);
+	case 130: // SYS_env_set_other_exception_upcall
+		return sys_env_set_other_exception_upcall(a1, (void *)a2);
 	default:
 		return -E_NO_SYS;
 	}

@@ -217,6 +217,10 @@ trap_dispatch(struct Trapframe *tf)
 			tf->tf_regs.reg_esi));
 	}
 
+	// Lab 4 挑战 5：允许用户处理更多异常
+	// 检查是否注册了更多异常处理
+	other_exception_handler(tf);
+
 	// Handle spurious interrupts
 	// The hardware sometimes raises these because of noise on the
 	// IRQ line or other reasons. We don't care.
@@ -234,6 +238,9 @@ trap_dispatch(struct Trapframe *tf)
 		lapic_eoi();
 		return sched_yield();
 	}
+
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_KBD)
+		return;
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
@@ -305,6 +312,54 @@ trap(struct Trapframe *tf)
 		sched_yield();
 }
 
+void
+other_exception_handler(struct Trapframe *tf)
+{
+	struct UTrapframe *utf;
+
+	if (tf->tf_trapno == T_DIVIDE || tf->tf_trapno == T_GPFLT || tf->tf_trapno == T_ILLOP)
+	{
+		if (tf->tf_cs == GD_KT)
+		{
+			print_trapframe(tf);
+			panic("other_exception_handler: exception occured in kernel mode");
+		}
+
+		if (curenv->env_other_exception_upcall)
+		{
+			// 判断 esp 是否已经在异常栈中
+			if (tf->tf_esp >= UXSTACKTOP - PGSIZE && tf->tf_esp <= UXSTACKTOP - 1)
+			{
+				utf = ((struct UTrapframe *) (tf->tf_esp - 4)) - 1;
+			}
+			else
+			{
+				utf = ((struct UTrapframe *) (UXSTACKTOP)) - 1;
+			}
+
+			user_mem_assert(curenv, utf, sizeof(struct UTrapframe), PTE_U | PTE_W);
+
+			if ((uint32_t)utf >= UXSTACKTOP - PGSIZE)
+			{
+				utf->utf_fault_va = 0;
+				utf->utf_eip = tf->tf_eip;
+				utf->utf_err = tf->tf_trapno;
+				utf->utf_esp = tf->tf_esp;
+				utf->utf_eflags = tf->tf_eflags;
+				utf->utf_regs = tf->tf_regs;
+
+				tf->tf_esp = (uint32_t)utf;
+
+				tf->tf_eip = (uint32_t)curenv->env_other_exception_upcall;
+
+				env_run(curenv);
+				return;
+			}
+		}
+	}
+
+	return;
+}
 
 void
 page_fault_handler(struct Trapframe *tf)
