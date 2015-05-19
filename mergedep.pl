@@ -27,7 +27,7 @@
 sub readdeps {
 	my $filename = shift;
 
-	open(DEPFILE, $filename) or return 0;
+	open(DEPFILE, '<:crlf', $filename) or return 0;
 	while (<DEPFILE>) {
 		if (/([^:]*):([^\\:]*)([\\]?)$/) {
 			my $target = $1;

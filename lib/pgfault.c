@@ -6,6 +6,7 @@
 
 #include <inc/lib.h>
 
+bool stack_allocated = false;
 
 // Assembly language pgfault entrypoint defined in lib/pfentry.S.
 extern void _pgfault_upcall(void);
@@ -26,12 +27,51 @@ set_pgfault_handler(void (*handler)(struct UTrapframe *utf))
 {
 	int r;
 
+	if (!stack_allocated)
+	{
+		if ((r = sys_page_alloc(0, (void *) (UXSTACKTOP - PGSIZE), PTE_U | PTE_W | PTE_P)))
+			panic("set_pgfault_handler: page_alloc failed (%e)", r);
+		stack_allocated = true;
+	}
+
 	if (_pgfault_handler == 0) {
 		// First time through!
 		// LAB 4: Your code here.
-		panic("set_pgfault_handler not implemented");
+
+		if ((r = sys_env_set_pgfault_upcall(0, _pgfault_upcall)))
+			panic("set_pgfault_handler: set_upcall failed (%e)", r);
+		// panic("set_pgfault_handler not implemented");
 	}
 
 	// Save handler pointer for assembly to call.
 	_pgfault_handler = handler;
+}
+
+// Lab 4 挑战 5：允许用户处理更多异常
+
+extern void _oe_upcall(void);
+
+void(*_oe_handler)(struct UTrapframe *utf);
+
+// 设置用户态其他异常处理程序
+void
+set_oe_handler(void(*handler)(struct UTrapframe *utf))
+{
+	int r;
+
+	if (!stack_allocated)
+	{
+		if ((r = sys_page_alloc(0, (void *)(UXSTACKTOP - PGSIZE), PTE_U | PTE_W | PTE_P)))
+			panic("set_oe_handler: page_alloc failed (%e)", r);
+		stack_allocated = true;
+	}
+
+	if (_oe_handler == 0) {
+		if ((r = sys_env_set_other_exception_upcall(0, _oe_upcall)))
+			panic("set_oe_handler: sys_env_set_other_exception_upcall failed (%e)", r);
+		// panic("set_pgfault_handler not implemented");
+	}
+
+	// Save handler pointer for assembly to call.
+	_oe_handler = handler;
 }

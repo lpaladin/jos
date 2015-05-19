@@ -28,7 +28,12 @@ void	umain(int argc, char **argv);
 
 // libmain.c or entry.S
 extern const char *binaryname;
-extern const volatile struct Env *thisenv;
+
+// Lab 4 挑战 6：实现共享内存的 fork
+// 对 thisenv 的 hack
+#define thisenv (*_thisenv_addr)
+extern const volatile struct Env **_thisenv_addr;
+
 extern const volatile struct Env envs[NENV];
 extern const volatile struct PageInfo pages[];
 
@@ -36,7 +41,8 @@ extern const volatile struct PageInfo pages[];
 void	exit(void);
 
 // pgfault.c
-void	set_pgfault_handler(void (*handler)(struct UTrapframe *utf));
+void	set_pgfault_handler(void(*handler)(struct UTrapframe *utf));
+void	set_oe_handler(void(*handler)(struct UTrapframe *utf));
 
 // readline.c
 char*	readline(const char *buf);
@@ -57,6 +63,15 @@ int	sys_page_map(envid_t src_env, void *src_pg,
 int	sys_page_unmap(envid_t env, void *pg);
 int	sys_ipc_try_send(envid_t to_env, uint32_t value, void *pg, int perm);
 int	sys_ipc_recv(void *rcv_pg);
+int	sys_capture_state(envid_t);
+int	sys_restore_state(envid_t);
+int	sys_env_set_other_exception_upcall(envid_t env, void *upcall);
+int begin_batchcall();
+int end_batchcall();
+
+extern bool in_batch_state;
+extern uint32_t *batch_argu[5];
+uint32_t batch_begin_pgnum, batch_end_pgnum;
 
 // This must be inlined.  Exercise for reader: why?
 static __inline envid_t __attribute__((always_inline))

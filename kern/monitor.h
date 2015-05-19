@@ -15,5 +15,14 @@ void monitor(struct Trapframe *tf);
 int mon_help(int argc, char **argv, struct Trapframe *tf);
 int mon_kerninfo(int argc, char **argv, struct Trapframe *tf);
 int mon_backtrace(int argc, char **argv, struct Trapframe *tf);
+int mon_showmappings(int argc, char **argv, struct Trapframe *tf);
+int mon_chmappingperm(int argc, char **argv, struct Trapframe *tf);
+int mon_memdump(int argc, char **argv, struct Trapframe *tf);
+int mon_testint(int argc, char **argv, struct Trapframe *tf);
+int mon_si(int argc, char **argv, struct Trapframe *tf);
+int mon_exit(int argc, char **argv, struct Trapframe *tf);
+
+int parse_hexaddr(const char *str, uint32_t *result);
+void show_nextinstr(struct Trapframe *tf);
 
 #endif	// !JOS_KERN_MONITOR_H

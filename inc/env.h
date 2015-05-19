@@ -66,6 +66,12 @@ struct Env {
 	uint32_t env_ipc_value;		// Data value sent to us
 	envid_t env_ipc_from;		// envid of the sender
 	int env_ipc_perm;		// Perm of page mapping received
+
+	// Lab 4 挑战 2：实现另一种调度机制
+	int lottery_count;		// 彩票调度的彩票数
+
+	// Lab 4 挑战 5：允许用户处理更多异常
+	void *env_other_exception_upcall;	// 其他异常回调入口点
 };
 
 #endif // !JOS_INC_ENV_H

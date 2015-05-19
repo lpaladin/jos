@@ -22,6 +22,7 @@ sys_cputs(const char *s, size_t len)
 	// Destroy the environment if not.
 
 	// LAB 3: Your code here.
+	user_mem_assert(curenv, s, len, PTE_U);
 
 	// Print the string supplied by the user.
 	cprintf("%.*s", len, s);
@@ -80,7 +81,20 @@ sys_exofork(void)
 	// will appear to return 0.
 
 	// LAB 4: Your code here.
-	panic("sys_exofork not implemented");
+
+	struct Env *e;
+	int error;
+
+	error = env_alloc(&e, curenv->env_id);
+	if (error)
+		return error;
+
+	e->env_status = ENV_NOT_RUNNABLE;
+	e->env_tf = curenv->env_tf;
+	e->env_tf.tf_regs.reg_eax = 0;
+
+	return e->env_id;
+	// panic("sys_exofork not implemented");
 }
 
 // Set envid's env_status to status, which must be ENV_RUNNABLE
@@ -100,7 +114,20 @@ sys_env_set_status(envid_t envid, int status)
 	// envid's status.
 
 	// LAB 4: Your code here.
-	panic("sys_env_set_status not implemented");
+
+	struct Env *env;
+	int error;
+
+	if (status != ENV_RUNNABLE && status != ENV_NOT_RUNNABLE)
+		return -E_INVAL;
+
+	error = envid2env(envid, &env, true);
+	if (error)
+		return error;
+
+	env->env_status = status;
+	return 0;
+	// panic("sys_env_set_status not implemented");
 }
 
 // Set envid's trap frame to 'tf'.
@@ -131,7 +158,17 @@ static int
 sys_env_set_pgfault_upcall(envid_t envid, void *func)
 {
 	// LAB 4: Your code here.
-	panic("sys_env_set_pgfault_upcall not implemented");
+
+	struct Env *env;
+	int error;
+
+	error = envid2env(envid, &env, true);
+	if (error)
+		return error;
+
+	env->env_pgfault_upcall = func;
+	return 0;
+	// panic("sys_env_set_pgfault_upcall not implemented");
 }
 
 // Allocate a page of memory and map it at 'va' with permission
@@ -161,7 +198,33 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	//   allocated!
 
 	// LAB 4: Your code here.
-	panic("sys_page_alloc not implemented");
+
+	struct Env *env;
+	struct PageInfo *p;
+	int error;
+
+	if ((perm & PTE_U) != PTE_U || (perm & PTE_P) != PTE_P ||
+		(perm & ~PTE_SYSCALL) || (uint32_t) va >= UTOP || (uint32_t)(va) % PGSIZE != 0)
+		return -E_INVAL;
+
+	error = envid2env(envid, &env, true);
+	if (error)
+		return error;
+
+	p = page_alloc(ALLOC_ZERO);
+	if (!p)
+		return -E_NO_MEM;
+
+	error = page_insert(env->env_pgdir, p, va, perm);
+
+	if (error)
+	{
+		page_free(p);
+		return -E_NO_MEM;
+	}
+
+	return 0;
+	//panic("sys_page_alloc not implemented");
 }
 
 // Map the page of memory at 'srcva' in srcenvid's address space
@@ -192,7 +255,32 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	//   check the current permissions on the page.
 
 	// LAB 4: Your code here.
-	panic("sys_page_map not implemented");
+
+	struct Env *srcenv, *dstenv;
+	pte_t *pte;
+	struct PageInfo *p;
+	int error;
+
+	if ((perm & PTE_U) != PTE_U || (perm & PTE_P) != PTE_P ||
+		(perm & ~PTE_SYSCALL) || (uint32_t) srcva >= UTOP || (uint32_t)(srcva) % PGSIZE != 0 ||
+		(uint32_t) dstva >= UTOP || (uint32_t)(dstva) % PGSIZE != 0)
+		return -E_INVAL;
+
+	error = envid2env(srcenvid, &srcenv, true);
+	if (error)
+		return error;
+
+	error = envid2env(dstenvid, &dstenv, true);
+	if (error)
+		return error;
+
+	p = page_lookup(srcenv->env_pgdir, srcva, &pte);
+
+	if (!p || (perm & PTE_W && !(*pte & PTE_W)))
+		return -E_INVAL;
+
+	return page_insert(dstenv->env_pgdir, p, dstva, perm);
+	// panic("sys_page_map not implemented");
 }
 
 // Unmap the page of memory at 'va' in the address space of 'envid'.
@@ -208,7 +296,21 @@ sys_page_unmap(envid_t envid, void *va)
 	// Hint: This function is a wrapper around page_remove().
 
 	// LAB 4: Your code here.
-	panic("sys_page_unmap not implemented");
+
+	struct Env *env;
+	struct PageInfo *p;
+	int error;
+
+	if ((uint32_t) va >= UTOP || (uint32_t)(va) % PGSIZE != 0)
+		return -E_INVAL;
+
+	error = envid2env(envid, &env, true);
+	if (error)
+		return error;
+
+	page_remove(env->env_pgdir, va);
+	return 0;
+	// panic("sys_page_unmap not implemented");
 }
 
 // Try to send 'value' to the target env 'envid'.
@@ -253,7 +355,51 @@ static int
 sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_try_send not implemented");
+
+	struct Env *dstenv;
+	pte_t *pte;
+	struct PageInfo *p;
+	int error;
+
+	error = envid2env(envid, &dstenv, false);
+	if (error)
+		return error;
+
+	if (!dstenv->env_ipc_recving)
+		return -E_IPC_NOT_RECV;
+
+	if ((uint32_t)srcva < UTOP && (uint32_t)dstenv->env_ipc_dstva < UTOP)
+	{
+		// 发送内存映射
+
+		if ((perm & PTE_U) != PTE_U || (perm & PTE_P) != PTE_P ||
+			(perm & ~PTE_SYSCALL) || (uint32_t)(srcva) % PGSIZE != 0)
+			return -E_INVAL;
+
+		p = page_lookup(curenv->env_pgdir, srcva, &pte);
+
+		if (!p || (perm & PTE_W && !(*pte & PTE_W)))
+			return -E_INVAL;
+
+		error = page_insert(dstenv->env_pgdir, p, dstenv->env_ipc_dstva, perm);
+		if (error < 0)
+			return error;
+
+		dstenv->env_ipc_perm = perm;
+	}
+	else
+		dstenv->env_ipc_perm = 0;
+
+	dstenv->env_ipc_from = curenv->env_id;
+	dstenv->env_ipc_value = value;
+	dstenv->env_ipc_recving = false;
+
+	// 标记返回
+	dstenv->env_tf.tf_regs.reg_eax = 0;
+	dstenv->env_status = ENV_RUNNABLE;
+
+	return 0;
+	// panic("sys_ipc_try_send not implemented");
 }
 
 // Block until a value is ready.  Record that you want to receive
@@ -271,7 +417,217 @@ static int
 sys_ipc_recv(void *dstva)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_recv not implemented");
+	
+	if ((uint32_t)dstva < UTOP && (uint32_t)dstva % PGSIZE != 0)
+		return -E_INVAL;
+
+	curenv->env_ipc_dstva = dstva;
+	curenv->env_ipc_recving = true;
+	curenv->env_status = ENV_NOT_RUNNABLE;
+	sched_yield();
+
+	// panic("sys_ipc_recv not implemented");
+	
+	// 控制流不会到达这里的。
+	return 0;
+}
+
+// Lab 4 挑战 4：实现进程的时空穿越
+
+static struct Env saved_env;
+static struct PageInfo *saved_pages[1024];
+static pde_t saved_pgdir[NPDENTRIES];
+static pte_t *saved_pgtab[NPDENTRIES];
+
+// 保存进程状态的系统调用
+// 注意整个系统中只有一个存储空间
+// 如果有进程调用过，那么在没有使用这个状态恢复原本进程之前
+// 不能再次分配
+static int
+sys_capture_state(envid_t envid)
+{
+	struct Env *env;
+	struct PageInfo *p;
+	pde_t *pgdir, pde;
+	pte_t *pte;
+	uint32_t temp, va, offset, pgcount = 0;
+	int error;
+
+	if (saved_pages[0])
+	{
+		if (envs[ENVX(saved_env.env_id)].env_status == ENV_DYING || envs[ENVX(saved_env.env_id)].env_status == ENV_FREE)
+		{
+			// 清空存储
+			for (va = 0; va < UTOP;)
+				if ((pde = saved_pgdir[PDX(va)]) & PTE_P)
+				{
+					page_free(pa2page(PADDR(saved_pgtab[PDX(va)])));
+				}
+
+			for (va = 0; va < UTOP;)
+			{
+				if ((pde = pgdir[PDX(va)]) & PTE_P)
+				{
+					for (offset = 0; offset < NPTENTRIES; offset++)
+					{
+						pte = (pte_t *)KADDR(PTE_ADDR(pde)) + PTX(va + offset * PGSIZE);
+						if (*pte & PTE_P)
+						{
+							page_free(saved_pages[pgcount]);
+							pgcount++;
+						}
+					}
+				}
+				va += PTSIZE;
+			}
+
+			saved_pages[0] = NULL;
+			pgcount = 0;
+		}
+		else
+			return -E_NO_MEM;
+	}
+
+	error = envid2env(envid, &env, true);
+	if (error)
+		return error;
+
+	saved_env = *env;
+
+	pgdir = env->env_pgdir;
+
+	memset(saved_pages, 0, sizeof(saved_pages));
+	memset(saved_pgdir, 0, sizeof(saved_pgdir));
+	memset(saved_pgtab, 0, sizeof(saved_pgtab));
+
+	// 保存页目录
+	memcpy(saved_pgdir, pgdir, PGSIZE);
+
+	for (va = 0; va < UTOP; )
+	{
+		if ((pde = pgdir[PDX(va)]) & PTE_P)
+		{
+			// 保存页表
+			cprintf("Saving PTE table...\n");
+			saved_pgtab[PDX(va)] = memcpy(page2kva(page_alloc(0)), KADDR(PTE_ADDR(pde)), PGSIZE);
+			for (offset = 0; offset < NPTENTRIES; offset++)
+			{
+				pte = (pte_t *)KADDR(PTE_ADDR(pde)) + PTX(va + offset * PGSIZE);
+				if (*pte & PTE_P)
+				{
+					cprintf("Copying page content...\n");
+					// 复制页面到临时存储
+					saved_pages[pgcount] = page_alloc(0);
+					memcpy(page2kva(saved_pages[pgcount]), KADDR(PTE_ADDR(*pte)), PGSIZE);
+					pgcount++;
+				}
+			}
+		}
+		va += PTSIZE;
+	}
+
+	return 0;
+}
+
+// 恢复进程状态的系统调用
+static int
+sys_restore_state(envid_t envid)
+{
+	struct Env *env;
+	struct PageInfo *p;
+	pde_t *pgdir, pde;
+	pte_t *pte;
+	uint32_t temp, va, offset, pgcount = 0;
+	int error;
+
+	if (!saved_pages[0])
+		return -E_INVAL;
+
+	error = envid2env(envid, &env, true);
+	if (error)
+		return error;
+
+	if (env->env_id != saved_env.env_id)
+		return -E_BAD_ENV;
+
+	*env = saved_env;
+
+	// 恢复页表
+	cprintf("Restoring PTE table...\n");
+	memcpy(pgdir = env->env_pgdir, saved_pgdir, PGSIZE);
+	for (va = 0; va < UTOP; va += PTSIZE)
+		if ((pde = pgdir[PDX(va)]) & PTE_P)
+		{
+			memcpy(KADDR(PTE_ADDR(pde)), saved_pgtab[PDX(va)], PGSIZE);
+			page_free(pa2page(PADDR(saved_pgtab[PDX(va)])));
+		}
+
+	cprintf("Restoring pages...\n");
+	for (va = 0; va < UTOP;)
+	{
+		if ((pde = pgdir[PDX(va)]) & PTE_P)
+		{
+			for (offset = 0; offset < NPTENTRIES; offset++)
+			{
+				pte = (pte_t *)KADDR(PTE_ADDR(pde)) + PTX(va + offset * PGSIZE);
+				if (*pte & PTE_P)
+				{
+					cprintf("Copying page content...\n");
+					// 恢复页面内容
+					memcpy(KADDR(PTE_ADDR(*pte)), page2kva(saved_pages[pgcount]), PGSIZE);
+					page_free(saved_pages[pgcount]);
+					pgcount++;
+				}
+			}
+		}
+		va += PTSIZE;
+	}
+
+	saved_pages[0] = NULL;
+
+	return 0;
+}
+
+// Lab 4 挑战 5：允许用户处理更多异常
+// 设置异常处理程序
+static int
+sys_env_set_other_exception_upcall(envid_t envid, void *func)
+{
+	struct Env *env;
+	int error;
+
+	error = envid2env(envid, &env, true);
+	if (error)
+		return error;
+
+	env->env_other_exception_upcall = func;
+	return 0;
+}
+
+// Lab 4 挑战 7：批量系统调用
+// 处理一批系统调用
+// 返回负值时中止
+// 注意第一个参数最后一项应该是 0xFFFFFFFF 用于表示结束
+static int
+sys_run_batch_syscall(uint32_t *syscallno, uint32_t **arguarray)
+{
+	int i, err;
+
+	if (user_mem_check(curenv, syscallno, 4, PTE_U | PTE_P) ||
+		user_mem_check(curenv, arguarray, 20, PTE_U | PTE_P) ||
+		user_mem_check(curenv, arguarray[0], 4, PTE_U | PTE_P) ||
+		user_mem_check(curenv, arguarray[1], 4, PTE_U | PTE_P) ||
+		user_mem_check(curenv, arguarray[2], 4, PTE_U | PTE_P) ||
+		user_mem_check(curenv, arguarray[3], 4, PTE_U | PTE_P) ||
+		user_mem_check(curenv, arguarray[4], 4, PTE_U | PTE_P))
+		return -E_INVAL;
+
+	for (i = 0; i < 64 && syscallno[i] != 0xFFFFFFFF; i++)
+	{
+		err = syscall(syscallno[i], arguarray[0][i], arguarray[1][i], arguarray[2][i], arguarray[3][i], arguarray[4][i]);
+		if (err < 0)
+			return err;
+	}
 	return 0;
 }
 
@@ -283,9 +639,45 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	// Return any appropriate return value.
 	// LAB 3: Your code here.
 
-	panic("syscall not implemented");
+	// panic("syscall not implemented");
 
-	switch (syscallno) {
+	switch (syscallno)
+	{
+	case SYS_cputs:
+		sys_cputs((char *)a1, a2);
+		return 0;
+	case SYS_cgetc:
+		return sys_cgetc();
+	case SYS_getenvid:
+		return sys_getenvid();
+	case SYS_env_destroy:
+		return sys_env_destroy(a1);
+	case SYS_yield:
+		return sys_yield(), 0;
+	case SYS_exofork:
+		return sys_exofork();
+	case SYS_env_set_status:
+		return sys_env_set_status(a1, a2);
+	case SYS_page_alloc:
+		return sys_page_alloc(a1, (void *)a2, a3);
+	case SYS_page_map:
+		return sys_page_map(a1, (void *)a2, a3, (void *)a4, a5);
+	case SYS_page_unmap:
+		return sys_page_unmap(a1, (void *)a2);
+	case SYS_env_set_pgfault_upcall:
+		return sys_env_set_pgfault_upcall(a1, (void *)a2);
+	case SYS_ipc_try_send:
+		return sys_ipc_try_send(a1, a2, (void *)a3, a4);
+	case SYS_ipc_recv:
+		return sys_ipc_recv((void *)a1);
+	case 128: // SYS_capture_state
+		return sys_capture_state(a1);
+	case 129: // SYS_restore_state
+		return sys_restore_state(a1);
+	case 130: // SYS_env_set_other_exception_upcall
+		return sys_env_set_other_exception_upcall(a1, (void *)a2);
+	case 131: // SYS_run_batch_syscall
+		return sys_run_batch_syscall((uint32_t *)a1, (uint32_t **)a2);
 	default:
 		return -E_INVAL;
 	}
