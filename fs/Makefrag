@@ -57,7 +57,8 @@ $(OBJDIR)/fs/fs: $(FSOFILES) $(OBJDIR)/lib/entry.o $(OBJDIR)/lib/libjos.a user/u
 $(OBJDIR)/fs/fsformat: fs/fsformat.c
 	@echo + mk $(OBJDIR)/fs/fsformat
 	$(V)mkdir -p $(@D)
-	$(V)$(NCC) $(NATIVE_CFLAGS) -o $(OBJDIR)/fs/fsformat fs/fsformat.c
+	$(V)$(NCC) $(NATIVE_CFLAGS) -o $(OBJDIR)/fs/fsformat fs/fsformat.c fs/mman.c
+	rm $(OBJDIR)/fs/fsformat.d
 
 $(OBJDIR)/fs/clean-fs.img: $(OBJDIR)/fs/fsformat $(FSIMGFILES)
 	@echo + mk $(OBJDIR)/fs/clean-fs.img

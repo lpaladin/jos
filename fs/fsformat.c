@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/mman.h>
+#include "mman.h"
 #include <sys/stat.h>
 #include <sys/types.h>
 #undef off_t
@@ -63,11 +63,13 @@ readn(int f, void *out, size_t n)
 {
 	size_t p = 0;
 	while (p < n) {
-		size_t m = read(f, out + p, n - p);
+		size_t m = read(f, (char *)out + p, n - p);
 		if (m < 0)
 			panic("read: %s", strerror(errno));
-		if (m == 0)
-			panic("read: Unexpected EOF");
+		if (m == 0) {
+			return;
+			panic("read: Unexpected EOF, now read %d", p);
+		}
 		p += m;
 	}
 }
