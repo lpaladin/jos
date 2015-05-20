@@ -130,7 +130,7 @@ include fs/Makefrag
 
 
 CPUS ?= 1
-QEMUOPTS = -gdb tcp:127.0.0.1:$(GDBPORT),ipv4 -hda $(OBJDIR)/kern/kernel.img
+QEMUOPTS = -gdb tcp:127.0.0.1:$(GDBPORT),ipv4 -hda $(OBJDIR)/kern/kernel.img -serial mon:stdio
 QEMUOPTS += $(shell if $(QEMU) -nographic -help | grep -q '^-D '; then echo '-D qemu.log'; fi)
 IMAGES = $(OBJDIR)/kern/kernel.img
 QEMUOPTS += -smp $(CPUS)
