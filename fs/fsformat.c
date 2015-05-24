@@ -67,7 +67,6 @@ readn(int f, void *out, size_t n)
 		if (m < 0)
 			panic("read: %s", strerror(errno));
 		if (m == 0) {
-			return;
 			panic("read: Unexpected EOF, now read %d", p);
 		}
 		p += m;
@@ -95,7 +94,7 @@ opendisk(const char *name)
 {
 	int r, diskfd, nbitblocks;
 
-	if ((diskfd = open(name, O_RDWR | O_CREAT, 0666)) < 0)
+	if ((diskfd = open(name, O_RDWR | O_CREAT | O_BINARY, 0666)) < 0)
 		panic("open %s: %s", name, strerror(errno));
 
 	if ((r = ftruncate(diskfd, 0)) < 0
@@ -188,7 +187,7 @@ writefile(struct Dir *dir, const char *name)
 	const char *last;
 	char *start;
 
-	if ((fd = open(name, O_RDONLY)) < 0)
+	if ((fd = open(name, O_RDONLY | O_BINARY)) < 0)
 		panic("open %s: %s", name, strerror(errno));
 	if ((r = fstat(fd, &st)) < 0)
 		panic("stat %s: %s", name, strerror(errno));

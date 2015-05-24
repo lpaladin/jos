@@ -1,6 +1,6 @@
 #include <inc/lib.h>
 
-const char *msg = "This is the NEW message of the day!\n\n";
+const char *msg = "This is the NEW message of the day!\r\n\r\n";
 
 #define FVA ((struct Fd*)0xCCCCC000)
 

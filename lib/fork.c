@@ -75,7 +75,7 @@ duppage(envid_t envid, unsigned pn)
 
 	// LAB 4: Your code here.
 	perm = uvpt[pn] & PTE_SYSCALL;
-	if (perm & PTE_COW || perm & PTE_W)
+	if ((perm & PTE_COW || perm & PTE_W) && !(perm & PTE_SHARE))
 	{
 		r = sys_page_map(0, addr, envid, addr, PTE_COW | PTE_U | PTE_P);
 		if (r < 0)
@@ -138,8 +138,8 @@ fork(void)
 	for (pdeid = 0; ; pdeid++)
 		if (uvpd[pdeid] & PTE_P)
 		{
-			temp = pdeid * NPDENTRIES;
-			for (pteid = 0; pteid < NPDENTRIES; pteid++)
+			temp = pdeid * NPTENTRIES;
+			for (pteid = 0; pteid < NPTENTRIES; pteid++)
 			{
 				if (temp + pteid >= UXSTACKTOP / PGSIZE - 1)
 					goto copyend;
@@ -222,8 +222,8 @@ sfork(void)
 	for (pdeid = 0;; pdeid++)
 		if (uvpd[pdeid] & PTE_P)
 		{
-			temp = pdeid * NPDENTRIES;
-			for (pteid = 0; pteid < NPDENTRIES; pteid++)
+			temp = pdeid * NPTENTRIES;
+			for (pteid = 0; pteid < NPTENTRIES; pteid++)
 			{
 				if (temp + pteid >= UXSTACKTOP / PGSIZE - 1)
 					goto copyend;

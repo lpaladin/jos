@@ -3,7 +3,7 @@
 
 #include "fs.h"
 
-static char *msg = "This is the NEW message of the day!\n\n";
+static char *msg = "This is the NEW message of the day!\r\n\r\n";
 
 void
 fs_test(void)
@@ -38,7 +38,7 @@ fs_test(void)
 	if ((r = file_get_block(f, 0, &blk)) < 0)
 		panic("file_get_block: %e", r);
 	if (strcmp(blk, msg) != 0)
-		panic("file_get_block returned wrong data");
+		panic("file_get_block returned wrong data: expected '%s', get '%s'.", msg, blk);
 	cprintf("file_get_block is good\n");
 
 	*(volatile char*)blk = *(volatile char*)blk;

@@ -150,6 +150,7 @@ trap_init_percpu(void)
 void
 print_trapframe(struct Trapframe *tf)
 {
+	return;
 	cprintf("TRAP frame at %p from CPU %d\n", tf, cpunum());
 	print_regs(&tf->tf_regs);
 	cprintf("  es   0x----%04x\n", tf->tf_es);
@@ -239,11 +240,14 @@ trap_dispatch(struct Trapframe *tf)
 		return sched_yield();
 	}
 
-	if (tf->tf_trapno == IRQ_OFFSET + IRQ_KBD)
-		return;
-
 	// Handle keyboard and serial interrupts.
 	// LAB 5: Your code here.
+
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_KBD)
+		return kbd_intr();
+
+	if (tf->tf_trapno == IRQ_OFFSET + IRQ_SERIAL)
+		return serial_intr();
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
