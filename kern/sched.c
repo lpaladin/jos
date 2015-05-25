@@ -6,7 +6,7 @@
 #include <kern/monitor.h>
 #include <kern/kclock.h>
 
-#define LOTTERY_SCHEDULER
+// #define LOTTERY_SCHEDULER
 
 void sched_halt(void);
 
