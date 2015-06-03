@@ -19,7 +19,7 @@ readline(const char *prompt)
 
 	cprintf("\033[1;35m");
 	i = 0;
-	echoing = 1;
+	echoing = iscons(0);
 	while (1) {
 		c = getchar();
 		if (c < 0) {

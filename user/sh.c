@@ -17,12 +17,15 @@ int gettoken(char *s, char **token);
 // Do not return until the shell command is finished.
 // runcmd() is called in a forked child,
 // so it's OK to manipulate file descriptor state.
+
+// Lab 5 挑战 6：实现分号、&号
 #define MAXARGS 16
 void
 runcmd(char* s)
 {
 	char *argv[MAXARGS], *t, argv0buf[BUFSIZ];
 	int argc, c, i, r, p[2], fd, pipe_child;
+	bool bg = false, tobecontinued = false;
 
 	pipe_child = 0;
 	gettoken(s, 0);
@@ -39,6 +42,14 @@ again:
 			}
 			argv[argc++] = t;
 			break;
+
+		case '&':
+			bg = true;
+			break;
+
+		case ';':
+			tobecontinued = true;
+			goto runit;
 
 		case '<':	// Input redirection
 			// Grab the filename from the argument list
@@ -159,25 +170,34 @@ runit:
 	// In the parent, close all file descriptors and wait for the
 	// spawned command to exit.
 	close_all();
-	if (r >= 0) {
-		if (debug)
-			cprintf("[%08x] WAIT %s %08x\n", thisenv->env_id, argv[0], r);
-		wait(r);
-		if (debug)
-			cprintf("[%08x] wait finished\n", thisenv->env_id);
-	}
 
-	// If we were the left-hand part of a pipe,
-	// wait for the right-hand part to finish.
-	if (pipe_child) {
-		if (debug)
-			cprintf("[%08x] WAIT pipe_child %08x\n", thisenv->env_id, pipe_child);
-		wait(pipe_child);
-		if (debug)
-			cprintf("[%08x] wait finished\n", thisenv->env_id);
+	if (!bg)
+	{
+		if (r >= 0) {
+			if (debug)
+				cprintf("[%08x] WAIT %s %08x\n", thisenv->env_id, argv[0], r);
+			wait(r);
+			if (debug)
+				cprintf("[%08x] wait finished\n", thisenv->env_id);
+		}
+
+		// If we were the left-hand part of a pipe,
+		// wait for the right-hand part to finish.
+		if (pipe_child) {
+			if (debug)
+				cprintf("[%08x] WAIT pipe_child %08x\n", thisenv->env_id, pipe_child);
+			wait(pipe_child);
+			if (debug)
+				cprintf("[%08x] wait finished\n", thisenv->env_id);
+		}
 	}
 
 	// Done!
+	if (tobecontinued)
+	{
+		tobecontinued = false;
+		goto again;
+	}
 	exit();
 }
 
@@ -266,6 +286,8 @@ usage(void)
 	exit();
 }
 
+char buf[1024];
+
 void
 umain(int argc, char **argv)
 {
@@ -301,17 +323,91 @@ umain(int argc, char **argv)
 	if (interactive == '?')
 		interactive = iscons(0);
 
+	// Lab 5 挑战 6：实现Tab完成
 	while (1) {
-		char *buf;
+		int i, c, echoing;
 
-		buf = readline(interactive ? "$ " : NULL);
-		if (buf == NULL) {
-			if (debug)
-				cprintf("EXITING\n");
-			exit();	// end of file
+		if (interactive)
+			printf("$ ");
+
+		cprintf("\033[1;35m");
+		i = 0;
+		echoing = iscons(0);
+		while (1) {
+			c = getchar();
+			if (c == 9)
+			{
+				// Tab 自动完成
+				int fd, j;
+				struct File f;
+				char buf2[1024] = { 0 };
+				bool nocomplete = false;
+
+				if ((fd = open("/", O_RDONLY)) < 0)
+					panic("open /: %e", fd);
+				while (readn(fd, &f, sizeof f) == sizeof f)
+					if (f.f_name[0])
+					{
+						for (j = 0; j < i; j++)
+							if (f.f_name[j] != buf[j])
+								break;
+
+						if (j == i)
+						{
+							if (!buf2[0])
+								strcpy(buf2, f.f_name);
+							else
+							{
+								if (!nocomplete)
+									printf("\n\033[1;30m");
+								nocomplete = true;
+								printf("%s ", f.f_name);
+							}
+						}
+					}
+
+				close(fd);
+
+				if (!nocomplete && buf2[0])
+				{
+					for (j = i; buf2[j]; j++)
+						cputchar(buf2[j]);
+					strcpy(buf, buf2);
+					i = j;
+				}
+				else if (nocomplete)
+				{
+					printf("%s\033[0m\n$ \033[1;35m", buf2);
+					for (j = 0; j < i; j++)
+						cputchar(buf[j]);
+				}
+			}
+			else if (c < 0) {
+				cprintf("\033[0m");
+				if (c != -E_EOF)
+					cprintf("read error: %e\n", c);
+				if (debug)
+					cprintf("EXITING\n");
+				exit();	// end of file
+			}
+			else if ((c == '\b' || c == '\x7f') && i > 0) {
+				if (echoing)
+					cputchar('\b');
+				i--;
+			}
+			else if (c >= ' ' && i < 1024 - 1) {
+				if (echoing)
+					cputchar(c);
+				buf[i++] = c;
+			}
+			else if (c == '\n' || c == '\r') {
+				if (echoing)
+					cputchar('\n');
+				buf[i] = 0;
+				cprintf("\033[0m");
+				break;
+			}
 		}
-		if (debug)
-			cprintf("LINE: %s\n", buf);
 		if (buf[0] == '#')
 			continue;
 		if (echocmds)

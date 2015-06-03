@@ -16,7 +16,12 @@ pgfault(struct UTrapframe *utf)
 {
 	uint32_t addr = utf->utf_fault_va;
 	uint32_t err = utf->utf_err;
-	pte_t pte = uvpt[addr / PGSIZE];
+	pte_t pte;
+	if (uvpd[PDX(addr)] & PTE_P)
+		pte = uvpt[addr / PGSIZE];
+	else
+		panic("pgfault: bad addr [%x]", utf->utf_fault_va);
+
 	int r;
 
 	// Check that the faulting access was (1) a write, and (2) to a

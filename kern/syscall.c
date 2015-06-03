@@ -154,7 +154,7 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 	user_mem_assert(curenv, tf, sizeof(struct Trapframe), PTE_U);
 
 	env->env_tf = *tf;
-	env->env_tf.tf_eflags |= FL_IF;
+	env->env_tf.tf_eflags = (env->env_tf.tf_eflags & ~FL_IOPL_3) | FL_IF;
 	env->env_tf.tf_ds = GD_UD | 3;
 	env->env_tf.tf_es = GD_UD | 3;
 	env->env_tf.tf_ss = GD_UD | 3;

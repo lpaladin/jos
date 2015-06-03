@@ -70,6 +70,7 @@ alloc_block(void)
 		if (block_is_free(blockno))
 		{
 			bitmap[blockno / 32] &= ~(1 << (blockno % 32));
+			flush_block(diskaddr(blockno));
 			return blockno;
 		}
 

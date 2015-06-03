@@ -41,6 +41,9 @@ ls1(const char *prefix, bool isdir, off_t size, const char *name)
 {
 	const char *sep;
 
+	if (isdir)
+		printf("\033[1;32m");
+
 	if(flag['l'])
 		printf("%11d %c ", size, isdir ? 'd' : '-');
 	if(prefix) {
@@ -53,6 +56,9 @@ ls1(const char *prefix, bool isdir, off_t size, const char *name)
 	printf("%s", name);
 	if(flag['F'] && isdir)
 		printf("/");
+
+	if (isdir)
+		printf("\033[0m");
 	printf("\n");
 }
 
