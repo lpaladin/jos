@@ -77,10 +77,11 @@ void
 flush_block(void *addr)
 {
 	uint32_t blockno = ((uint32_t)addr - DISKMAP) / BLKSIZE;
-	void *oldaddr = addr;
+	void *oldaddr;
 	int r;
 
 	addr = ROUNDDOWN(addr, PGSIZE);
+	oldaddr = addr;
 
 	if (addr < (void*)DISKMAP || addr >= (void*)(DISKMAP + DISKSIZE))
 		panic("flush_block of bad va %08x", addr);
