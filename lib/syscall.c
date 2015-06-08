@@ -122,6 +122,12 @@ sys_getenvid(void)
 	 return syscall(SYS_getenvid, 0, 0, 0, 0, 0, 0);
 }
 
+int
+sys_set_pte_pafield(void *va, physaddr_t pa, int perm)
+{
+	return syscall(233, 1, (uint32_t)va, pa, perm, 0, 0);
+}
+
 void
 sys_yield(void)
 {

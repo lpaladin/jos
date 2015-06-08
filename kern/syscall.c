@@ -28,6 +28,18 @@ sys_cputs(const char *s, size_t len)
 	cprintf("%.*s", len, s);
 }
 
+// 最终项目：换页
+// 系统调用：改变PTE的物理地址域
+static int
+sys_set_pte_pafield(void *va, physaddr_t pa, int perm)
+{
+	pte_t *pte = pgdir_walk(curenv->env_pgdir, va, true);
+	if (!pte)
+		return -E_NO_MEM;
+	*pte = pa | perm;
+	return 0;
+}
+
 // Read a character from the system console without blocking.
 // Returns the character, or 0 if there is no input waiting.
 static int
@@ -661,6 +673,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 
 	switch (syscallno)
 	{
+	case 233:
+		return sys_set_pte_pafield((void *)a1, a2, a3);
 	case SYS_cputs:
 		sys_cputs((char *)a1, a2);
 		return 0;

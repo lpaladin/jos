@@ -47,10 +47,23 @@ void	set_oe_handler(void(*handler)(struct UTrapframe *utf));
 // readline.c
 char*	readline(const char *buf);
 
+// 最终项目：换页
+// swap.c
+
+// 换出在磁盘中
+#define PTE_INDISK 0x200
+
+// 换出页
+int swap_page_to_disk(void *va);
+
+// 换入页
+int swap_back_page(void *va);
+
 // syscall.c
 void	sys_cputs(const char *string, size_t len);
 int	sys_cgetc(void);
 envid_t	sys_getenvid(void);
+int sys_set_pte_pafield(void *va, physaddr_t pa, int perm);
 int	sys_env_destroy(envid_t);
 void	sys_yield(void);
 static envid_t sys_exofork(void);
