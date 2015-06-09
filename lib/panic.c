@@ -19,6 +19,8 @@ _panic(const char *file, int line, const char *fmt, ...)
 	vcprintf(fmt, ap);
 	cprintf("\033[0m\n");
 
+	exit();
+
 	// Cause a breakpoint exception
 	while (1)
 		asm volatile("int3");

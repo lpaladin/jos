@@ -123,7 +123,7 @@ fd_close(struct Fd *fd, bool must_exist)
 // File functions
 // --------------------------------------------------------------
 
-static struct Dev *devtab[] =
+struct Dev *devtab[] =
 {
 	&devfile,
 	&devpipe,

@@ -20,11 +20,15 @@
 #define MAXPATHLEN	1024
 
 // Number of block pointers in a File descriptor
-#define NDIRECT		10
+#define NDIRECT		9
 // Number of direct block pointers in an indirect block
 #define NINDIRECT	(BLKSIZE / 4)
+// Number of indirect block pointers in an double indirect block
+#define NDOUBLEINDIRECT (BLKSIZE / 4) * BLKSIZE
 
-#define MAXFILESIZE	((NDIRECT + NINDIRECT) * BLKSIZE)
+// 直接常量避免溢出
+#define MAXFILESIZE	0xFFFFFFFF
+// #define MAXFILESIZE	((NDIRECT + NINDIRECT + NDOUBLEINDIRECT) * BLKSIZE)
 
 struct File {
 	char f_name[MAXNAMELEN];	// filename
@@ -35,10 +39,11 @@ struct File {
 	// A block is allocated iff its value is != 0.
 	uint32_t f_direct[NDIRECT];	// direct blocks
 	uint32_t f_indirect;		// indirect block
+	uint32_t f_double_indirect;
 
 	// Pad out to 256 bytes; must do arithmetic in case we're compiling
 	// fsformat on a 64-bit machine.
-	uint8_t f_pad[256 - MAXNAMELEN - 8 - 4*NDIRECT - 4];
+	uint8_t f_pad[256 - MAXNAMELEN - 8 - 4*NDIRECT - 8];
 } __attribute__((packed));	// required only on some 64-bit machines
 
 // An inode block contains exactly BLKFILES 'struct File's

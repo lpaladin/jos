@@ -121,6 +121,7 @@ int	fstat(int fd, struct Stat *statbuf);
 int	stat(const char *path, struct Stat *statbuf);
 
 // file.c
+union Fsipc fsipcbuf __attribute__((aligned(PGSIZE)));
 int	open(const char *path, int mode);
 int	ftruncate(int fd, off_t size);
 int	remove(const char *path);

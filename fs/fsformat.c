@@ -63,12 +63,11 @@ readn(int f, void *out, size_t n)
 {
 	size_t p = 0;
 	while (p < n) {
-		size_t m = read(f, (char *)out + p, n - p);
+		size_t m = read(f, out + p, n - p);
 		if (m < 0)
 			panic("read: %s", strerror(errno));
-		if (m == 0) {
-			panic("read: Unexpected EOF, now read %d", p);
-		}
+		if (m == 0)
+			panic("read: Unexpected EOF");
 		p += m;
 	}
 }
@@ -229,7 +228,7 @@ main(int argc, char **argv)
 		usage();
 
 	nblocks = strtol(argv[2], &s, 0);
-	if (*s || s == argv[2] || nblocks < 2 || nblocks > 1024)
+	if (*s || s == argv[2] || nblocks < 2 )
 		usage();
 
 	opendisk(argv[1]);
