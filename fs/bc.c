@@ -96,31 +96,31 @@ flush_block(void *addr)
 			panic("flush_block: sys_page_map failed (%e)", r);
 	}
 
-	//// LAB 5 挑战 2：驱逐缓存
-	//// 找个没被访问的驱逐掉
-	//for (addr = (void*)DISKMAP; addr < (void*)(DISKMAP + DISKSIZE);)
-	//{
-	//	if (uvpd[PDX(addr)] & PTE_P)
-	//	{
-	//		int i;
-	//		for (i = 0; i < NPTENTRIES; i++)
-	//			if ((uvpt[PGNUM(addr + i * PGSIZE)] & (PTE_P | PTE_A)) == PTE_P && 
-	//				(void *)((uint32_t)addr + i * PGSIZE) != oldaddr)
-	//			{
-	//				addr = (void *)((uint32_t)addr + i * PGSIZE);
-	//				cprintf("\033[1;31;44mEvictingBlock: [%x]\033[0m\n", addr);
-	//				if ((uvpt[PGNUM(addr)] & PTE_D) == PTE_D)
-	//				{
-	//					if ((r = ide_write(((uint32_t)addr - DISKMAP) / SECTSIZE, addr, BLKSECTS)) < 0)
-	//						panic("flush_block: ide_write failed (%e)", r);
-	//				}
-	//				if ((r = sys_page_unmap(0, addr) < 0))
-	//					panic("flush_block: sys_page_unmap failed (%e)", r);
-	//				return;
-	//			}
-	//	}
-	//	addr = (void *)((uint32_t)addr + PTSIZE);
-	//}
+	// LAB 5 挑战 2：驱逐缓存
+	// 找个没被访问的驱逐掉
+	for (addr = (void*)DISKMAP; addr < (void*)(DISKMAP + DISKSIZE);)
+	{
+		if (uvpd[PDX(addr)] & PTE_P)
+		{
+			int i;
+			for (i = 0; i < NPTENTRIES; i++)
+				if ((uvpt[PGNUM(addr + i * PGSIZE)] & (PTE_P | PTE_A)) == PTE_P && 
+					(void *)((uint32_t)addr + i * PGSIZE) != oldaddr)
+				{
+					addr = (void *)((uint32_t)addr + i * PGSIZE);
+					// cprintf("\033[1;31;44mEvictingBlock: [%x]\033[0m\n", addr);
+					if ((uvpt[PGNUM(addr)] & PTE_D) == PTE_D)
+					{
+						if ((r = ide_write(((uint32_t)addr - DISKMAP) / SECTSIZE, addr, BLKSECTS)) < 0)
+							panic("flush_block: ide_write failed (%e)", r);
+					}
+					if ((r = sys_page_unmap(0, addr) < 0))
+						panic("flush_block: sys_page_unmap failed (%e)", r);
+					return;
+				}
+		}
+		addr = (void *)((uint32_t)addr + PTSIZE);
+	}
 
 	// panic("flush_block not implemented");
 }

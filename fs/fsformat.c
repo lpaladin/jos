@@ -142,8 +142,20 @@ finishfile(struct File *f, uint32_t start, uint32_t len)
 	if (i == NDIRECT) {
 		uint32_t *ind = alloc(BLKSIZE);
 		f->f_indirect = blockof(ind);
-		for (; i < len / BLKSIZE; ++i)
+		for (; i < len / BLKSIZE && i < (NDIRECT + NINDIRECT); ++i)
 			ind[i - NDIRECT] = start + i;
+	}
+	if (i == (NDIRECT + NINDIRECT)) {
+		uint32_t *dind = alloc(BLKSIZE);
+		f->f_double_indirect = blockof(dind);
+		for (; i < len / BLKSIZE ; ) {
+			int j;
+			uint32_t *ind = alloc(BLKSIZE);
+			(*dind) = blockof(ind);
+			dind++;
+			for (j = 0 ;i < len / BLKSIZE && j < NINDIRECT; ++i,++j)
+				ind[j] = start + i;
+		}
 	}
 }
 

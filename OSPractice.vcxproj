@@ -100,6 +100,7 @@
     <ClCompile Include="lib\readline.c" />
     <ClCompile Include="lib\spawn.c" />
     <ClCompile Include="lib\string.c" />
+    <ClCompile Include="lib\swap.c" />
     <ClCompile Include="lib\syscall.c" />
     <ClCompile Include="lib\wait.c" />
     <ClCompile Include="user\badsegment.c" />
@@ -132,6 +133,7 @@
     <ClCompile Include="user\initsh.c" />
     <ClCompile Include="user\ls.c" />
     <ClCompile Include="user\lsfd.c" />
+    <ClCompile Include="user\manualswappagetest.c" />
     <ClCompile Include="user\num.c" />
     <ClCompile Include="user\pingpong.c" />
     <ClCompile Include="user\pingpongs.c" />

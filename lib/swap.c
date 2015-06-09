@@ -7,12 +7,22 @@
 static char buf[PGSIZE];
 extern struct Dev *devtab[4];
 
-static
-void write_page(int fd, const char *buf, size_t nbytes)
+static void
+write_page(int fd, const char *buf, size_t nbytes)
 {
 	assert(nbytes == PGSIZE);
 	write(fd, buf, PGSIZE / 2);
 	write(fd, buf + PGSIZE / 2, PGSIZE / 2);
+}
+
+static void
+dump_page(void *va)
+{
+	char *p = ROUNDDOWN(va, PGSIZE);
+	int i;
+	for (i = 0; i < PGSIZE; i++)
+		cprintf("%d ", p[i]);
+	cputchar('\n');
 }
 
 int
@@ -39,7 +49,9 @@ swap_page_to_disk(void *va)
 		{
 			cprintf("\033[1;46m[PageSwap]\033[35;42mFirstTime\033[0m\n");
 
+
 			// 重新创建文件
+			ftruncate(fd, PAGEFILE_SIZE);
 			seek(fd, 0);
 
 			// 空闲位图
@@ -49,10 +61,10 @@ swap_page_to_disk(void *va)
 
 			write_page(fd, buf, PGSIZE);
 
-			// 写入余下的页面
-			memset(buf, 0, PGSIZE);
-			for (i = 0; i < PAGEFILE_PGCOUNT; i++)
-				write_page(fd, buf, PGSIZE);
+			//// 写入余下的页面
+			//memset(buf, 0, PGSIZE);
+			//for (i = 0; i < PAGEFILE_PGCOUNT; i++)
+			//	write_page(fd, buf, PGSIZE);
 
 			cprintf("\033[1;46m[PageSwap]\033[35;42mPagefileCreated\033[0m\n");
 		}
@@ -73,12 +85,12 @@ swap_page_to_disk(void *va)
 						cprintf("\033[1;46m[PageSwap]\033[30;44mWritingPage\033[0m\n");
 
 						// 标记为非空闲
-						buf[i / 8] |= c;
+						buf[i / 8] &= ~c;
 						seek(fd, 0);
 						write_page(fd, buf, PGSIZE);
 
 						// 找到了！
-						seek(fd, (i + j) * PGSIZE);
+						seek(fd, (1 + i + j) * PGSIZE);
 						write_page(fd, va, PGSIZE);
 						sys_page_unmap(0, va);
 
@@ -132,7 +144,7 @@ swap_back_page(void *va)
 
 		// 标记为空闲
 		cprintf("\033[1;46m[PageSwap]\033[30;44mTrying to mark free with pte=%x\033[0m\n", pte);
-		buf[i / 8] &= ~(1 << i % 8);
+		buf[i / 8] |= 1 << i % 8;
 		seek(fd, 0);
 		write_page(fd, buf, PGSIZE);
 
@@ -144,7 +156,7 @@ swap_back_page(void *va)
 			return -E_NO_MEM;
 		}
 
-		seek(fd, i * PGSIZE);
+		seek(fd, (i + 1) * PGSIZE);
 		read(fd, va, PGSIZE);
 
 		// 好了

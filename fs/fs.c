@@ -505,6 +505,16 @@ file_truncate_blocks(struct File *f, off_t newsize)
 		free_block(f->f_indirect);
 		f->f_indirect = 0;
 	}
+	if (new_nblocks <= NINDIRECT && f->f_double_indirect) {
+		int i;
+		for(i = 0; i < NINDIRECT; i++) {
+			uint32_t* ppindirect = (uint32_t*)(diskaddr(f->f_double_indirect))+i;
+			if (*ppindirect)
+				free_block(*ppindirect);
+		}
+		free_block(f->f_double_indirect);
+	}
+
 }
 
 // Set the size of file f, truncating or extending as necessary.
@@ -537,6 +547,14 @@ file_flush(struct File *f)
 	flush_block(f);
 	if (f->f_indirect)
 		flush_block(diskaddr(f->f_indirect));
+	if (f->f_double_indirect) {
+		for(i = 0; i < NINDIRECT; i++) {
+			uint32_t* ppindirect = (uint32_t*)(diskaddr(f->f_double_indirect))+i;
+			if (*ppindirect)
+				flush_block(diskaddr(*ppindirect));
+		}
+		flush_block(diskaddr(f->f_double_indirect));
+	}
 }
 
 
