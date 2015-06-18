@@ -352,10 +352,13 @@ serve(void)
 	}
 }
 
+extern bool in_urgency;
+
 void
 umain(int argc, char **argv)
 {
 	static_assert(sizeof(struct File) == 256);
+	in_urgency = true;
 	binaryname = "fs";
 	cprintf("FS is running\n");
 

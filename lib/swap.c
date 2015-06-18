@@ -3,9 +3,12 @@
 #include <inc/lib.h>
 #define PAGEFILE_PGCOUNT 2048
 #define PAGEFILE_SIZE (PAGEFILE_PGCOUNT + 1) * PGSIZE
+#undef dbg_cprintf
+#define dbg_cprintf(...) cprintf(__VA_ARGS__)
 
 static char buf[PGSIZE];
 extern struct Dev *devtab[4];
+extern bool in_urgency;
 
 static void
 write_page(int fd, const char *buf, size_t nbytes)
@@ -29,17 +32,18 @@ int
 swap_page_to_disk(void *va)
 {
 	int fd, i;
+
 	va = ROUNDDOWN(va, PGSIZE);
 	if ((uint32_t)va == (uint32_t)ROUNDDOWN(&fsipcbuf, PGSIZE) ||
 		(uint32_t)va == (uint32_t)ROUNDDOWN(&devfile, PGSIZE) ||
 		(uint32_t)va == (uint32_t)ROUNDDOWN(&devtab, PGSIZE) ||
 		(uint32_t)va == (uint32_t)ROUNDDOWN(&buf, PGSIZE) ||
 		(uint32_t)va >= 0xD0000000) // FDTABLE
-		return 0;
+		return -E_INVAL;
 
-
+	in_urgency = true;
 	fd = open("/pagefile", O_CREAT | O_RDWR);
-	cprintf("\033[1;46m[PageSwap]\033[35;41mSwapping page [va = 0x%08x] to disk...\033[0m\n", va);
+	dbg_cprintf("\033[1;46m[PageSwap]\033[35;41mSwapping page [va = 0x%08x] to disk...\033[0m\n", va);
 
 	if (fd > 0)
 	{
@@ -47,7 +51,7 @@ swap_page_to_disk(void *va)
 		fstat(fd, &statbuf);
 		if (statbuf.st_size != PAGEFILE_SIZE)
 		{
-			cprintf("\033[1;46m[PageSwap]\033[35;42mFirstTime\033[0m\n");
+			dbg_cprintf("\033[1;46m[PageSwap]\033[35;42mFirstTime\033[0m\n");
 
 
 			// 重新创建文件
@@ -66,7 +70,7 @@ swap_page_to_disk(void *va)
 			//for (i = 0; i < PAGEFILE_PGCOUNT; i++)
 			//	write_page(fd, buf, PGSIZE);
 
-			cprintf("\033[1;46m[PageSwap]\033[35;42mPagefileCreated\033[0m\n");
+			dbg_cprintf("\033[1;46m[PageSwap]\033[35;42mPagefileCreated\033[0m\n");
 		}
 
 		// 交换入磁盘
@@ -82,7 +86,7 @@ swap_page_to_disk(void *va)
 					if (buf[i / 8] & c)
 					{
 						pte_t pte = uvpt[PGNUM(va)];
-						cprintf("\033[1;46m[PageSwap]\033[30;44mWritingPage\033[0m\n");
+						dbg_cprintf("\033[1;46m[PageSwap]\033[30;44mWritingPage\033[0m\n");
 
 						// 标记为非空闲
 						buf[i / 8] &= ~c;
@@ -90,32 +94,43 @@ swap_page_to_disk(void *va)
 						write_page(fd, buf, PGSIZE);
 
 						// 找到了！
+						cprintf("Swap to file pa = %x va = %x offset = %d * PGSIZE\n", PTE_ADDR(pte), va, (1 + i + j));
 						seek(fd, (1 + i + j) * PGSIZE);
 						write_page(fd, va, PGSIZE);
+
+
+						if (PTE_ADDR(uvpt[PGNUM(va)]) == 0x9f000)
+							cprintf("Swap unmap 0x9f000 here and va = %x\n", va);
 						sys_page_unmap(0, va);
 
 						// 保存偏移量入PTE
 						sys_set_pte_pafield(va, (i + j) * PGSIZE, 
 							PTE_INDISK | (pte & PTE_SYSCALL & ~PTE_P));
 						close(fd);
+						in_urgency = false;
 						return 0;
 					}
 			}
 
 		// 没地方了……
 		close(fd);
+		in_urgency = false;
 		return -E_NO_DISK;
 	}
-	else
-		return fd;
+
+	in_urgency = false;
+	return fd;
 }
 
 int
 swap_back_page(void *va)
 {
-	int fd = open("/pagefile", O_RDWR), i;
+	int fd, i;
+	in_urgency = false;
+
+	fd = open("/pagefile", O_RDWR);
 	va = ROUNDDOWN(va, PGSIZE);
-	cprintf("\033[1;46m[PageSwap]\033[35;43mSwapping back page [va = 0x%08x] from disk...\033[0m\n", va);
+	dbg_cprintf("\033[1;46m[PageSwap]\033[35;43mSwapping back page [va = 0x%08x] from disk...\033[0m\n", va);
 
 	if (fd > 0)
 	{
@@ -125,6 +140,7 @@ swap_back_page(void *va)
 		fstat(fd, &statbuf);
 		if (statbuf.st_size != PAGEFILE_SIZE)
 		{
+			in_urgency = false;
 			return -E_FAULT;
 		}
 
@@ -139,30 +155,35 @@ swap_back_page(void *va)
 		if (buf[i / 8] & (1 << i % 8))
 		{
 			close(fd);
+			in_urgency = false;
 			return -E_FAULT;
 		}
 
+		// 读出对应页写回内存！
+		dbg_cprintf("\033[1;46m[PageSwap]\033[30;44mReadingPage\033[0m\n");
+		if (sys_page_alloc(0, va, (pte | PTE_P) & PTE_SYSCALL & ~PTE_INDISK) < 0)
+		{
+			close(fd);
+			in_urgency = false;
+			return -E_NO_MEM;
+		}
+		in_urgency = false;
+
+		cprintf("Swap from file pa = %x va = %x offset = %d * PGSIZE\n", PTE_ADDR(uvpt[PGNUM(va)]), va, (1 + i));
+		seek(fd, (i + 1) * PGSIZE);
+		read(fd, va, PGSIZE);
+
 		// 标记为空闲
-		cprintf("\033[1;46m[PageSwap]\033[30;44mTrying to mark free with pte=%x\033[0m\n", pte);
+		dbg_cprintf("\033[1;46m[PageSwap]\033[30;44mTrying to mark free with pte=%x\033[0m\n", pte);
 		buf[i / 8] |= 1 << i % 8;
 		seek(fd, 0);
 		write_page(fd, buf, PGSIZE);
 
-		// 读出对应页写回内存！
-		cprintf("\033[1;46m[PageSwap]\033[30;44mReadingPage\033[0m\n");
-		if (sys_page_alloc(0, va, (pte | PTE_P) & PTE_SYSCALL & ~PTE_INDISK) < 0)
-		{
-			close(fd);
-			return -E_NO_MEM;
-		}
-
-		seek(fd, (i + 1) * PGSIZE);
-		read(fd, va, PGSIZE);
-
 		// 好了
 		close(fd);
+		in_urgency = false;
 		return 0;
 	}
-	else
-		return fd;
+	in_urgency = false;
+	return fd;
 }

@@ -30,7 +30,8 @@ USERAPPS :=		$(USERAPPS) \
 			$(OBJDIR)/user/testpteshare \
 			$(OBJDIR)/user/testshell \
 			$(OBJDIR)/user/hello \
-			$(OBJDIR)/user/manualswappagetest
+			$(OBJDIR)/user/manualswappagetest \
+			$(OBJDIR)/user/autoswappagetest
 
 
 FSIMGTXTFILES :=	$(FSIMGTXTFILES) \

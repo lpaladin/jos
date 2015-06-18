@@ -42,6 +42,8 @@ bc_pgfault(struct UTrapframe *utf)
 	if (super && blockno >= super->s_nblocks)
 		panic("reading non-existent block %08x\n", blockno);
 
+	addr = ROUNDDOWN(addr, PGSIZE);
+
 	// Allocate a page in the disk map region, read the contents
 	// of the block from the disk into that page.
 	// Hint: first round addr to page boundary. fs/ide.c has code to read
@@ -49,7 +51,39 @@ bc_pgfault(struct UTrapframe *utf)
 	//
 	// LAB 5: you code here:
 	if ((r = sys_page_alloc(0, ROUNDDOWN(addr, PGSIZE), PTE_U | PTE_P | PTE_W)) < 0)
-		panic("in bc_pgfault, sys_page_alloc: %e", r);
+	{
+		// LAB 5 挑战 2：驱逐缓存
+		// 找个没被访问的驱逐掉
+		for (addr = (void*)DISKMAP; addr < (void*)(DISKMAP + DISKSIZE);)
+		{
+			if (uvpd[PDX(addr)] & PTE_P)
+			{
+				int i;
+				for (i = 0; i < NPTENTRIES; i++)
+					if ((uvpt[PGNUM(addr + i * PGSIZE)] & (PTE_P | PTE_A)) == PTE_P &&
+						((uint32_t)addr + i * PGSIZE) != utf->utf_fault_va)
+					{
+						addr = (void *)((uint32_t)addr + i * PGSIZE);
+						dbg_cprintf("\033[1;31;44mUrgentEvictingBlock: [%x]\033[0m\n", addr);
+						if ((uvpt[PGNUM(addr)] & PTE_D) == PTE_D)
+						{
+							if ((r = ide_write(((uint32_t)addr - DISKMAP) / SECTSIZE, addr, BLKSECTS)) < 0)
+								panic("bc_pgfault: ide_write failed (%e)", r);
+						}
+						if ((r = sys_page_unmap(0, addr) < 0))
+							panic("bc_pgfault: sys_page_unmap failed (%e)", r);
+						goto fin;
+					}
+			}
+			addr = (void *)((uint32_t)addr + PTSIZE);
+		}
+	fin:
+		addr = ROUNDDOWN((void *)utf->utf_fault_va, PGSIZE);
+		if ((r = sys_page_alloc(0, ROUNDDOWN(addr, PGSIZE), PTE_U | PTE_P | PTE_W)) < 0)
+			panic("in bc_pgfault, sys_page_alloc: %e", r);
+	}
+	if (PTE_ADDR(uvpt[PGNUM(addr)]) == 0x9f000)
+		cprintf("FileServ page alloc 0x9f000 here and va = %x\n", addr);
 
 	if ((r = ide_read(((uint32_t)addr - DISKMAP) / SECTSIZE, addr, BLKSECTS)) < 0)
 		panic("in bc_pgfault, ide_read: %e", r);
@@ -108,7 +142,7 @@ flush_block(void *addr)
 					(void *)((uint32_t)addr + i * PGSIZE) != oldaddr)
 				{
 					addr = (void *)((uint32_t)addr + i * PGSIZE);
-					// cprintf("\033[1;31;44mEvictingBlock: [%x]\033[0m\n", addr);
+					dbg_cprintf("\033[1;31;44mEvictingBlock: [%x]\033[0m\n", addr);
 					if ((uvpt[PGNUM(addr)] & PTE_D) == PTE_D)
 					{
 						if ((r = ide_write(((uint32_t)addr - DISKMAP) / SECTSIZE, addr, BLKSECTS)) < 0)

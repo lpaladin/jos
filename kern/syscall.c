@@ -201,6 +201,8 @@ sys_env_set_pgfault_upcall(envid_t envid, void *func)
 	// panic("sys_env_set_pgfault_upcall not implemented");
 }
 
+extern size_t allocated_pages;
+
 // Allocate a page of memory and map it at 'va' with permission
 // 'perm' in the address space of 'envid'.
 // The page's contents are set to 0.
@@ -218,7 +220,7 @@ sys_env_set_pgfault_upcall(envid_t envid, void *func)
 //	-E_NO_MEM if there's no memory to allocate the new page,
 //		or to allocate any necessary page tables.
 static int
-sys_page_alloc(envid_t envid, void *va, int perm)
+sys_page_alloc(envid_t envid, void *va, int perm, bool urgent)
 {
 	// Hint: This function is a wrapper around page_alloc() and
 	//   page_insert() from kern/pmap.c.
@@ -240,6 +242,9 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	error = envid2env(envid, &env, true);
 	if (error)
 		return error;
+
+	if (!urgent && allocated_pages > npages * 0.1)
+		return -E_NO_MEM;
 
 	p = page_alloc(ALLOC_ZERO);
 	if (!p)
@@ -292,9 +297,12 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	int error;
 
 	if ((perm & PTE_U) != PTE_U || (perm & PTE_P) != PTE_P ||
-		(perm & ~PTE_SYSCALL) || (uint32_t) srcva >= UTOP || (uint32_t)(srcva) % PGSIZE != 0 ||
-		(uint32_t) dstva >= UTOP || (uint32_t)(dstva) % PGSIZE != 0)
+		(perm & ~PTE_SYSCALL) || (uint32_t)srcva >= UTOP || (uint32_t)(srcva) % PGSIZE != 0 ||
+		(uint32_t)dstva >= UTOP || (uint32_t)(dstva) % PGSIZE != 0)
+	{
+		cprintf("map parameter error: %x, %x, %x, %x, %x\n", srcenvid, srcva, dstenvid, dstva, perm);
 		return -E_INVAL;
+	}
 
 	error = envid2env(srcenvid, &srcenv, true);
 	if (error)
@@ -691,7 +699,7 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	case SYS_env_set_status:
 		return sys_env_set_status(a1, a2);
 	case SYS_page_alloc:
-		return sys_page_alloc(a1, (void *)a2, a3);
+		return sys_page_alloc(a1, (void *)a2, a3, a4);
 	case SYS_page_map:
 		return sys_page_map(a1, (void *)a2, a3, (void *)a4, a5);
 	case SYS_page_unmap:

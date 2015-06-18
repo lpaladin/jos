@@ -3,63 +3,12 @@
 #include <inc/string.h>
 #include <inc/lib.h>
 
-// PTE_COW marks copy-on-write page table entries.
-// It is one of the bits explicitly allocated to user processes (PTE_AVAIL).
-#define PTE_COW		0x800
-
 //
 // Custom page fault handler - if faulting page is copy-on-write,
 // map in our own private writable copy.
 //
-static void
-pgfault(struct UTrapframe *utf)
-{
-	uint32_t addr = utf->utf_fault_va;
-	uint32_t err = utf->utf_err;
-	pte_t pte;
-	if (uvpd[PDX(addr)] & PTE_P)
-		pte = uvpt[addr / PGSIZE];
-	else
-		panic("pgfault: bad addr [%x]", utf->utf_fault_va);
 
-	int r;
-
-	// Check that the faulting access was (1) a write, and (2) to a
-	// copy-on-write page.  If not, panic.
-	// Hint:
-	//   Use the read-only page table mappings at uvpt
-	//   (see <inc/memlayout.h>).
-
-	// LAB 4: Your code here.
-	addr = ROUNDDOWN(addr, PGSIZE);
-
-	if (!(err & FEC_WR) || !(pte & PTE_COW))
-		panic("pgfault: unable to handle page fault, eip = %x, access = %x, pte = %x, addr = %x", utf->utf_eip, err, pte, addr);
-
-	// Allocate a new page, map it at a temporary location (PFTEMP),
-	// copy the data from the old page to the new page, then move the new
-	// page to the old page's address.
-	// Hint:
-	//   You should make three system calls.
-
-	// LAB 4: Your code here.
-
-	r = sys_page_alloc(0, (void *)PFTEMP, PTE_U | PTE_W | PTE_P);
-	if (r < 0)
-		panic("pgfault: sys_page_alloc failed (%e)", r);
-
-	memcpy((void *)PFTEMP, (void *) addr, PGSIZE);
-
-	r = sys_page_map(0, (void *)PFTEMP, 0, (void *) addr, (pte & PTE_SYSCALL & ~PTE_COW) | PTE_W);
-	if (r < 0)
-		panic("pgfault: sys_page_map failed (%e)", r);
-
-	r = sys_page_unmap(0, (void *)PFTEMP);
-	if (r < 0)
-		panic("pgfault: sys_page_unmap failed (%e)", r);
-
-	// panic("pgfault not implemented");
-}
+extern void default_pgfault_handler(struct UTrapframe *utf);
 
 //
 // Map our virtual page pn (address pn*PGSIZE) into the target envid
@@ -125,7 +74,7 @@ fork(void)
 	uint32_t pdeid, pteid, temp;
 	extern void _pgfault_upcall(void);
 
-	set_pgfault_handler(pgfault);
+	set_pgfault_handler(default_pgfault_handler);
 	child = sys_exofork();
 	if (child < 0)
 		return child;
@@ -213,7 +162,7 @@ sfork(void)
 	uint32_t pdeid, pteid, temp;
 	extern void _pgfault_upcall(void);
 
-	set_pgfault_handler(pgfault);
+	set_pgfault_handler(default_pgfault_handler);
 	child = sys_exofork();
 	if (child < 0)
 		return child;

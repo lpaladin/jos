@@ -172,7 +172,7 @@ file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool all
         *ppdiskbno = ((uint32_t*)diskaddr(f->f_indirect) + (filebno - NDIRECT));
     }
 	else {
-		// cprintf("in double walk %d\n", filebno);
+		dbg_cprintf("in double walk %d\n", filebno);
 		if (f->f_double_indirect == 0)
 		{
 			if (alloc)

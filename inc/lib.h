@@ -22,6 +22,7 @@
 #include <inc/args.h>
 
 #define USED(x)		(void)(x)
+#define dbg_cprintf(...) // cprintf(__VA_ARGS__)
 
 // main user program
 void	umain(int argc, char **argv);
@@ -105,6 +106,10 @@ int32_t ipc_recv(envid_t *from_env_store, void *pg, int *perm_store);
 envid_t	ipc_find_env(enum EnvType type);
 
 // fork.c
+
+// PTE_COW marks copy-on-write page table entries.
+// It is one of the bits explicitly allocated to user processes (PTE_AVAIL).
+#define PTE_COW		0x800
 #define	PTE_SHARE	0x400
 envid_t	fork(void);
 envid_t	sfork(void);	// Challenge!

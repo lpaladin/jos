@@ -2,12 +2,16 @@
 
 #include <inc/syscall.h>
 #include <inc/lib.h>
+#undef dbg_cprintf
+#define dbg_cprintf(...) cprintf(__VA_ARGS__)
 
 // Lab 4 挑战 7：批量系统调用
 bool in_batch_state = false;
 int batch_syscall_count = 0;
 uint32_t batch_callno[64], argustores[5][64], 
 *batch_argu[5] = { argustores[0], argustores[1], argustores[2], argustores[3], argustores[4] };
+
+bool in_urgency = false;
 
 #ifdef USE_SYSENTER
 
@@ -137,18 +141,68 @@ sys_yield(void)
 int
 sys_page_alloc(envid_t envid, void *va, int perm)
 {
-	return syscall(SYS_page_alloc, 1, envid, (uint32_t) va, perm, 0, 0);
+	int r;
+	retry:
+
+	if (in_urgency) // 紧急分配
+		r = syscall(SYS_page_alloc, 1, envid, (uint32_t)va, perm, 1, 0);
+	else
+		r = syscall(SYS_page_alloc, 1, envid, (uint32_t)va, perm, 0, 0);
+
+	// 最终项目：换页
+	if (r == -E_NO_MEM)
+	{
+		// 没地方了……开始找页踢到硬盘！
+
+		int pdeid, pteid, temp;
+
+		dbg_cprintf("[%x]Insufficent space....\n", thisenv->env_id);
+
+		for (pdeid = 4; pdeid < NPDENTRIES; pdeid++)
+			if (uvpd[pdeid] & PTE_P)
+			{
+				temp = pdeid * NPTENTRIES;
+				for (pteid = 0; pteid < NPTENTRIES; pteid++)
+					if (uvpt[temp + pteid] & PTE_P && !(uvpt[temp + pteid] & PTE_A) &&
+						swap_page_to_disk((void *)((temp + pteid) * PGSIZE)) == 0)
+					{
+						goto retry;
+					}
+			}
+
+		dbg_cprintf("All pages has PTE_A....\n");
+
+		// 不行……再来一次！（这次不舍去PTE_A了）
+		for (pdeid = 4; pdeid < NPDENTRIES; pdeid++)
+			if (uvpd[pdeid] & PTE_P)
+			{
+				temp = pdeid * NPTENTRIES;
+				for (pteid = 0; pteid < NPTENTRIES; pteid++)
+					if (uvpt[temp + pteid] & PTE_P &&
+						swap_page_to_disk((void *)((temp + pteid) * PGSIZE)) == 0)
+					{
+						goto retry;
+					}
+			}
+
+		dbg_cprintf("Still insufficent space!\n");
+	}
+	return r;
 }
 
 int
 sys_page_map(envid_t srcenv, void *srcva, envid_t dstenv, void *dstva, int perm)
 {
+	if (PTE_ADDR(uvpt[PGNUM(srcva)]) == 0x9f000)
+		cprintf("Map 0x9f000 here and va = %x -> %x\n", srcva, dstva);
 	return syscall(SYS_page_map, 1, srcenv, (uint32_t) srcva, dstenv, (uint32_t) dstva, perm);
 }
 
 int
 sys_page_unmap(envid_t envid, void *va)
 {
+	if (PTE_ADDR(uvpt[PGNUM(va)]) == 0x9f000)
+		cprintf("Unmap 0x9f000 here and va = %x\n", va);
 	return syscall(SYS_page_unmap, 1, envid, (uint32_t) va, 0, 0, 0);
 }
 

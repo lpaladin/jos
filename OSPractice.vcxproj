@@ -103,6 +103,7 @@
     <ClCompile Include="lib\swap.c" />
     <ClCompile Include="lib\syscall.c" />
     <ClCompile Include="lib\wait.c" />
+    <ClCompile Include="user\autoswappagetest.c" />
     <ClCompile Include="user\badsegment.c" />
     <ClCompile Include="user\breakpoint.c" />
     <ClCompile Include="user\buggyhello.c" />

@@ -86,8 +86,8 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 
 		// 函数栈帧基本信息
 		cprintf("  ebp %08x  eip %08x  args", ebp, eip);
-		for (i = 2; i < 7; i++)
-			cprintf(" %08x", READ_ADDR(ebp + i * 4));
+		//for (i = 2; i < 7; i++)
+		//	cprintf(" %08x", READ_ADDR(ebp + i * 4));
 		cputchar('\n');
 
 		// 根据 eip 得出的函数定义信息
